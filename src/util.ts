@@ -1,12 +1,11 @@
-import {ES256KSigner} from '@cef-ebsi/did-jwt';
-import {createJWT} from '@cef-ebsi/did-jwt';
+import {ES256KSigner,createJWT} from '@cef-ebsi/did-jwt';
 import axios from "axios";
 
 const { EbsiWallet } = require("@cef-ebsi/wallet-lib");
 const { ethers } = require("ethers");
 const elliptic_1 = require("elliptic");
 const js_base64_1 = require("js-base64");
-const thumbprint_1 = require("jose/jwk/thumbprint");
+
 const base64url = require("base64url");
 const {
   createVerifiablePresentation,
@@ -44,7 +43,7 @@ export const  createDidAuthResponsePayload=async (input , jwk): Promise<{Respons
   
   const getThumbprint = async(hexPrivateKey,kid)=> {
     const jwk = getJWK(hexPrivateKey,kid);
-    const thumbprint = await thumbprint_1.calculateThumbprint(jwk, "sha256");
+    const thumbprint=''; //await thumbprint_1.calculateThumbprint(jwk, "sha256");
     return thumbprint;
   }
 

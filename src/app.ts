@@ -5,10 +5,10 @@ import express from "express";
 import { registerDid,didUpdateDoc } from "./router/didRegistry.router";
 // rest of the code remains same
 const app = express();
-const PORT = 5050;
+const PORT = 9080;
 app.use(express.json());
-app.use("/ebsi/registerDid", registerDid);
-app.use("/ebsi/updateDid", didUpdateDoc);
+app.use("/1.0/create", registerDid);
+app.use("/1.0/update", didUpdateDoc);
 
 
 //app.use("/revocationservicedriver/initialize", initializerRouter);

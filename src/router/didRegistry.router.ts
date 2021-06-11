@@ -7,7 +7,7 @@ export const registerDid = express.Router();
 
 registerDid.post("/", async (req: Request, res: Response) => {
   try {
-    const response =await  didRegistry(req.body.secret.toke,req.body.secret.id_token);
+    const response =await  didRegistry(req.body.secret.token,req.body.secret.id_token);
     //console.log(req.body.data)
     //const response = await initializer.initialize(req.body.credential);
     try {
