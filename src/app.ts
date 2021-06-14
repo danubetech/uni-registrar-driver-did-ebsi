@@ -10,8 +10,6 @@ app.use(express.json());
 app.use("/1.0/create", registerDid);
 app.use("/1.0/update", didUpdateDoc);
 
-
-//app.use("/revocationservicedriver/initialize", initializerRouter);
 app.get("/", (req, res) => res.send("Express + TypeScript Server"));
 app.listen(PORT, () => {
   console.log(`⚡️[server]: Server is running at https://localhost:${PORT}`);

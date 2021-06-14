@@ -10,7 +10,7 @@ import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
 const uuid_1 = require("uuid");
 
-export const didRegistry = async (token: string, id_token: string):Promise<{didState:didRegResponse}> => {
+export const didRegistry = async (token: string, id_token: string,didDocument:object):Promise<{didState:didRegResponse}> => {
   const keyPairs = await EbsiWallet.generateKeyPair();
   const privateKey = "0x" + keyPairs.privateKey;
   let client;
@@ -31,7 +31,7 @@ export const didRegistry = async (token: string, id_token: string):Promise<{didS
       ? id_token
       : await (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
       console.log(idToken);
-  const buildParam = await buildParams(client);
+  const buildParam = await buildParams(client,didDocument);
   let param = {
     from: client.address,
     ...buildParam.param,
@@ -110,12 +110,13 @@ const sendApiTransaction = async (
   return response.data;
 };
 
-const buildParams = async (client: any) => {
+const buildParams = async (client: any,didDocument:object) => {
   const controllerDid = client.did;
-  const newDidDocument = prepareDidDocument(
+  const newDidDocument = await prepareDidDocument(
     controllerDid,
     "publicKeyHex",
-    client.privateKey
+    client.privateKey,
+    didDocument
   );
 
   const {

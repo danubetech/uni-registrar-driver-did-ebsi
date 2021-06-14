@@ -6,20 +6,19 @@ import { didRegistry,didUpdate } from "../didRegistry";
 export const registerDid = express.Router();
 
 registerDid.post("/", async (req: Request, res: Response) => {
+  
   try {
-    const response =await  didRegistry(req.body.secret.token,req.body.secret.id_token);
-    //console.log(req.body.data)
-    //const response = await initializer.initialize(req.body.credential);
+   // if(req.body.secret == null) throw ('Invalid params');
+   console.log(req.body);
+    const response = await didRegistry(req.body.secret.token,req.body.secret.id_token,req.body.didDocument);
     try {
       console.log(response)
       res.send(response);
     } catch (e) {
-      res.status(500);
+      res.sendStatus(500);
     }
   } catch (error) {
-    console.log("error");
-    console.log(error);
-    res.status(500).send(error);
+    res.sendStatus(500);
   }
 });
 
@@ -28,8 +27,9 @@ registerDid.post("/", async (req: Request, res: Response) => {
 export const didUpdateDoc = express.Router();
 
 didUpdateDoc.post("/", async (req: Request, res: Response) => {
+  console.log(req.body)
   try {
-    const response =await  didUpdate(req.body.secret.toke,req.body.secret.id_token,req.body.identifier, req.body.secret.privateKey);
+    const response =await  didUpdate(req.body.secret.token,req.body.secret.id_token,req.body.identifier, req.body.secret.privateKey);
     //console.log(req.body.data)
     //const response = await initializer.initialize(req.body.credential);
     try {

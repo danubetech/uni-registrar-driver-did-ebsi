@@ -1,4 +1,4 @@
-import {ES256KSigner,createJWT} from '@cef-ebsi/did-jwt';
+import { ES256KSigner, createJWT } from "@cef-ebsi/did-jwt";
 import axios from "axios";
 
 const { EbsiWallet } = require("@cef-ebsi/wallet-lib");
@@ -13,69 +13,77 @@ const {
 const canonicalize = require("canonicalize");
 const bs58 = require("bs58");
 const crypto = require("crypto");
-  
 
-
-export const  createDidAuthResponsePayload=async (input , jwk): Promise<{ResponsePayload:object}>=> {
-
-    const responsePayload = {
-      iss: 'https://self-issued.me',
-      sub: await getThumbprint(input.hexPrivatekey,jwk.kid),
-      aud: input.redirectUri,
-      nonce: input.nonce,
-      sub_jwk: jwk,
-      claims: input.claims,
+export const createDidAuthResponsePayload = async (
+  input,
+  jwk
+): Promise<{ ResponsePayload: object }> => {
+  const responsePayload = {
+    iss: "https://self-issued.me",
+    sub: await getThumbprint(input.hexPrivatekey, jwk.kid),
+    aud: input.redirectUri,
+    nonce: input.nonce,
+    sub_jwk: jwk,
+    claims: input.claims,
   };
-    return {ResponsePayload:responsePayload};
-  }
- 
-  
-  const getJWK = (hexPrivateKey, kid)=> {
-    const { x, y } = getECKeyfromHexPrivateKey(hexPrivateKey);
-    return {
-        kid,
-        kty: 'EC',
-        crv: 'secp256k1',
-        x,
-        y,
-    };
-  }
-  
-  const getThumbprint = async(hexPrivateKey,kid)=> {
-    const jwk = getJWK(hexPrivateKey,kid);
-    const thumbprint=''; //await thumbprint_1.calculateThumbprint(jwk, "sha256");
-    return thumbprint;
-  }
+  return { ResponsePayload: responsePayload };
+};
 
-  export const signDidAuthInternal= async (did, payload, hexPrivateKey)=> {
-    // check hexPrivateKey is valid
-    const request = !!payload.client_id;
+const getJWK = (hexPrivateKey, kid) => {
+  const { x, y } = getECKeyfromHexPrivateKey(hexPrivateKey);
+  return {
+    kid,
+    kty: "EC",
+    crv: "secp256k1",
+    x,
+    y,
+  };
+};
 
-    let response = await createJWT({ ...payload }, {
-        issuer: 'https://self-issued.me',
-        alg: 'ES256K',
-        signer: ES256KSigner(hexPrivateKey.replace("0x", "")),
-        expiresIn: 5 * 60,
+const getThumbprint = async (hexPrivateKey, kid) => {
+  const jwk = getJWK(hexPrivateKey, kid);
+  const thumbprint = ""; //await thumbprint_1.calculateThumbprint(jwk, "sha256");
+  return thumbprint;
+};
+
+export const signDidAuthInternal = async (did, payload, hexPrivateKey) => {
+  // check hexPrivateKey is valid
+  const request = !!payload.client_id;
+
+  let response = await createJWT(
+    { ...payload },
+    {
+      issuer: "https://self-issued.me",
+      alg: "ES256K",
+      signer: ES256KSigner(hexPrivateKey.replace("0x", "")),
+      expiresIn: 5 * 60,
     },
     {
-      alg: 'ES256K',
-      typ: 'JWT',
-      kid: request ? did : `${did}#key-1`
-  })
-    return response;
-}
+      alg: "ES256K",
+      typ: "JWT",
+      kid: request ? did : `${did}#key-1`,
+    }
+  );
+  return response;
+};
 
-const  getECKeyfromHexPrivateKey = (hexPrivateKey) => {
-    const ec = new elliptic_1.ec("secp256k1");
-    const privKey = ec.keyFromPrivate(hexPrivateKey.replace("0x", ""), "hex");
-    const pubPoint = privKey.getPublic();
-    return {
-        x: js_base64_1.Base64.fromUint8Array(pubPoint.getX().toArrayLike(Buffer), true),
-        y: js_base64_1.Base64.fromUint8Array(pubPoint.getY().toArrayLike(Buffer), true),
-    };
-}
+const getECKeyfromHexPrivateKey = (hexPrivateKey) => {
+  const ec = new elliptic_1.ec("secp256k1");
+  const privKey = ec.keyFromPrivate(hexPrivateKey.replace("0x", ""), "hex");
+  const pubPoint = privKey.getPublic();
+  return {
+    x: js_base64_1.Base64.fromUint8Array(
+      pubPoint.getX().toArrayLike(Buffer),
+      true
+    ),
+    y: js_base64_1.Base64.fromUint8Array(
+      pubPoint.getY().toArrayLike(Buffer),
+      true
+    ),
+  };
+};
 
-export const createVP= async (did,privateKey, vc) =>{
+export const createVP = async (did, privateKey, vc) => {
   const options = {
     resolver: `https://api.preprod.ebsi.eu/did-registry/v2/identifiers`,
     tirUrl: `https://api.preprod.ebsi.eu/trusted-issuers-registry/v2/issuers`,
@@ -107,7 +115,7 @@ export const createVP= async (did,privateKey, vc) =>{
       kid: `${options.resolver}/${did}#keys-1`,
     }
   );
-  
+
   const vpToken = jwtdata.split(".");
 
   const signatureValue = {
@@ -121,8 +129,7 @@ export const createVP= async (did,privateKey, vc) =>{
     signatureValue,
     options
   );
-}
-
+};
 
 const extractIatFromJwt = (jwt) => {
   const token = jwt.split(".");
@@ -130,14 +137,18 @@ const extractIatFromJwt = (jwt) => {
   return JSON.parse(payload).iat;
 };
 
-export const serialize=  async (object)=> {
-  if (object === null || typeof object !== 'object' || object.toJSON != null) {
+export const serialize = async (object) => {
+  if (object === null || typeof object !== "object" || object.toJSON != null) {
     return JSON.stringify(object);
   }
-}
+};
 
-
-export const prepareDidDocument = (didUser, publicKeyType, privateKeyController) => {
+export const prepareDidDocument =async (
+  didUser,
+  publicKeyType,
+  privateKeyController,
+  reqDidDoc
+) => {
   let publicKey;
   const controller = new ethers.Wallet(privateKeyController);
   switch (publicKeyType) {
@@ -161,20 +172,7 @@ export const prepareDidDocument = (didUser, publicKeyType, privateKeyController)
     default:
       throw new Error(`invalid type ${publicKeyType}`);
   }
-  const didDocument = {
-    "@context": "https://w3id.org/did/v1",
-    id: didUser,
-    verificationMethod: [
-      {
-        id: `${didUser}#keys-1`,
-        type: "Secp256k1VerificationKey2018",
-        controller: didUser,
-        ...publicKey,
-      },
-    ],
-    authentication: [didUser],
-    assertionMethod: [`${didUser}#keys-1`],
-  };
+  const didDocument = await constructDidDoc(didUser, publicKey, reqDidDoc);
 
   const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
 
@@ -206,8 +204,50 @@ export const prepareDidDocument = (didUser, publicKeyType, privateKeyController)
   };
 };
 
+const constructDidDoc = async (
+  didUser: string,
+  publicKey: object,
+  didDocument: object
+): Promise<{ didDoc: object }> => {
+  if (didDocument == null || Object.keys(didDocument).length < 3) return { didDoc: defaultDidDoc(didUser, publicKey) };
+  else {
+    //\\ TODO: construct the did doc and insert the key properly
+    let doc:object = didDocument;
+    if (!('@context' in didDocument) || doc['@context'].length ==0) doc['@context'] ="https://w3id.org/did/v1";
+    doc['verificationMethod']={
+      id: `${didUser}#keys-1`,
+      type: "Secp256k1VerificationKey2018",
+      controller: didUser,
+      ...publicKey,
+    };
+    if (!('authentication' in didDocument) || doc['authentication'].length ==0 ) doc['authentication'] =didUser;
+    if (!('assertionMethod' in didDocument)|| doc['assertionMethod'].length ==0) doc['assertionMethod'] =[`${didUser}#keys-1`];
+    return { didDoc: doc };
+  }
+};
 
-export const prepareUpdateDidDocument = (didUser, publicKeyType, privateKeyController) => {
+const defaultDidDoc = (didUser: string, publicKey: object) => {
+  return {
+    "@context": "https://w3id.org/did/v1",
+    id: didUser,
+    verificationMethod: [
+      {
+        id: `${didUser}#keys-1`,
+        type: "Secp256k1VerificationKey2018",
+        controller: didUser,
+        ...publicKey,
+      },
+    ],
+    authentication: [didUser],
+    assertionMethod: [`${didUser}#keys-1`],
+  };
+};
+
+export const prepareUpdateDidDocument = (
+  didUser,
+  publicKeyType,
+  privateKeyController
+) => {
   let publicKey;
   const controller = new ethers.Wallet(privateKeyController);
   switch (publicKeyType) {
@@ -282,29 +322,38 @@ function fromHexString(hexString) {
   return new Uint8Array(match.map((byte) => parseInt(byte, 16)));
 }
 
-export const jsonrpcSendTransaction= async(client, token, url, method, param)=> {
-  
+export const jsonrpcSendTransaction = async (
+  client,
+  token,
+  url,
+  method,
+  param
+) => {
   const body = jsonrpcBody(method, [param]);
-  console.log('start')
-  const response = await axios.post(url,body,{headers: {Authorization: `Bearer ${token}`,},});
-  console.log('end')
+  console.log("start");
+  const response = await axios.post(url, body, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  console.log("end");
   const unsignedTransaction = response.data.result;
   const uTx = formatEthersUnsignedTransaction(
     JSON.parse(JSON.stringify(unsignedTransaction))
   );
-  console.log('unsigned tx')
+  console.log("unsigned tx");
   console.log(uTx);
   uTx.chainId = Number(uTx.chainId);
-  
+
   const sgnTx = await client.signTransaction(uTx);
-  console.log('unsigned tx')
-  console.log(sgnTx)
+  console.log("unsigned tx");
+  console.log(sgnTx);
   const bodySend = jsonrpcBody("signedTransaction", [
     paramSignedTransaction(unsignedTransaction, sgnTx),
   ]);
-  
-  return axios.post(url,bodySend,{headers: {Authorization: `Bearer ${token}`,},});
-}
+
+  return axios.post(url, bodySend, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
 
 export function jsonrpcBody(method, params) {
   return {
@@ -338,7 +387,3 @@ function paramSignedTransaction(tx, sgnTx) {
     signedRawTransaction: sgnTx,
   };
 }
-
-
-
-
