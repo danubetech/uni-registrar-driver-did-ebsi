@@ -1,4 +1,4 @@
-name: Docker build/push image to Dockerhub
+name: Docker build/deploy image to Dockerhub
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
       - 'README.md'
       - 'LICENSE'
       - 'docs'
-    branches: [main, gh-workflows]
+    branches: [main]
   workflow_dispatch:
 
 env:
