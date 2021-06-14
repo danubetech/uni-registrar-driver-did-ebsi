@@ -30,7 +30,7 @@ export const didRegistry = async (token: string, id_token: string):Promise<{didS
     id_token != null
       ? id_token
       : await (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
-
+      console.log(idToken);
   const buildParam = await buildParams(client);
   let param = {
     from: client.address,
