@@ -1,9 +1,6 @@
-//
 import express from "express";
-//import { revokerRouter } from "./revokerRouter/Revoker.router";
-//import { verifierRouter } from "./verifierRouter/Verifier.router";
-import { registerDid,didUpdateDoc } from "./router/didRegistry.router";
-// rest of the code remains same
+import { registerDid, didUpdateDoc } from "./router/didOperations.router";
+
 const app = express();
 const PORT = 9080;
 app.use(express.json());

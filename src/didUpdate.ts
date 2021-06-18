@@ -1,47 +1,40 @@
-import {
-  createDidAuthResponsePayload,
-  signDidAuthInternal,
-  prepareDidDocument,
-  jsonrpcSendTransaction,
-} from "./util";
+import { prepareUpdateDidDocument, jsonrpcSendTransaction } from "./util";
 import { userOnBoardAuthReq } from "./userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
 const uuid_1 = require("uuid");
 
-export const didRegistry = async (
+export const didUpdate = async (
   token: string,
   id_token: string,
-  didDocument: object
+  did: string,
+  privateKey: string,
+  didDocument: object,
+  flag: string
 ): Promise<{ didState: didRegResponse }> => {
-  const keyPairs = await EbsiWallet.generateKeyPair();
-  const privateKey = "0x" + keyPairs.privateKey;
   let client;
-
-  client = new ethers.Wallet(privateKey);
-  const did = await EbsiWallet.createDid();
+  client = new ethers.Wallet("0x" + privateKey);
   client.did = did;
-  console.log("did " + did);
-  const wallet = new EbsiWallet(privateKey);
-
-  // Get wallet's public key (different formats)
-  const publicKey = await wallet.getPublicKey();
-  const publicKeyPem = wallet.getPublicKey({ format: "pem" });
+  const wallet = new EbsiWallet("0x" + privateKey);
   const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
 
+  const keyPairs = await EbsiWallet.generateKeyPair();
+  const newClient = await new ethers.Wallet("0x" + keyPairs.privateKey);
   const idToken =
     id_token != null
       ? id_token
       : await (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
-  console.log(idToken);
-  const buildParam = await buildParams(client, didDocument);
+
+  // Creates a URI using the wallet backend that manages entity DID keys
+
+  const buildParam = await buildParams(newClient, client, didDocument, flag);
   let param = {
     from: client.address,
     ...buildParam.param,
   };
 
   const res = await sendApiTransaction(
-    "insertDidDocument",
+    "updateDidDocument",
     idToken,
     param,
     client,
@@ -50,12 +43,14 @@ export const didRegistry = async (
       console.log(buildParam.info.data);
     }
   );
+  console.log("did doc updated");
+  //client = newClient;
   console.log("here....");
   return {
     didState: {
       state: "finished",
       identifier: did,
-      secret: keyPairs,
+      secret: { updatedKeys: keyPairs },
       didDocument: buildParam.info.data,
     },
   };
@@ -85,15 +80,20 @@ const sendApiTransaction = async (
   return response.data;
 };
 
-const buildParams = async (client: any, didDocument: object) => {
+const buildParams = async (
+  newClient: any,
+  client: any,
+  didDocument: object,
+  flag
+) => {
   const controllerDid = client.did;
-  const newDidDocument = await prepareDidDocument(
+  const newDidDocument = prepareUpdateDidDocument(
     controllerDid,
     "publicKeyHex",
-    client.privateKey,
+    newClient.privateKey,
+    flag,
     didDocument
   );
-
   const {
     didDocumentBuffer,
     canonicalizedDidDocumentHash,
@@ -121,63 +121,6 @@ const buildParams = async (client: any, didDocument: object) => {
       didVersionMetadata,
     },
   };
-};
-
-const createDidAuthRequestPayload = async (
-  input
-): Promise<{ RequestPayload: object }> => {
-  const requestPayload = {
-    iss: input.issuer,
-    scope: "open_id did_authn",
-    response_type: "id_token",
-    client_id: input.redirectUri,
-    nonce: uuid_1.v4(),
-    claims: input.claims,
-  };
-  return { RequestPayload: requestPayload };
-};
-
-const createAuthenticationResponses = async (didAuthResponseCall, jwk) => {
-  if (
-    !didAuthResponseCall ||
-    !didAuthResponseCall.hexPrivatekey ||
-    !didAuthResponseCall.did ||
-    !didAuthResponseCall.redirectUri
-  )
-    throw new Error("Invalid params");
-
-  const payload = await createDidAuthResponsePayload(didAuthResponseCall, jwk);
-  //console.log(payload);
-  // signs payload using internal libraries
-  const jwt = await signDidAuthInternal(
-    didAuthResponseCall.did,
-    payload,
-    didAuthResponseCall.hexPrivatekey
-  );
-  const params = `id_token=${jwt}`;
-  const uriResponse = {
-    urlEncoded: "",
-    encoding: "application/x-www-form-urlencoded",
-    response_mode: didAuthResponseCall.response_mode
-      ? didAuthResponseCall.response_mode
-      : "fragment", // FRAGMENT is the default
-  };
-  if (didAuthResponseCall.response_mode === "form_post") {
-    uriResponse.urlEncoded = encodeURI(didAuthResponseCall.redirectUri);
-    //uriResponse.bodyEncoded = encodeURI(params);
-    return uriResponse;
-  }
-  if (didAuthResponseCall.response_mode === "query") {
-    uriResponse.urlEncoded = encodeURI(
-      `${didAuthResponseCall.redirectUri}?${params}`
-    );
-    return uriResponse;
-  }
-  uriResponse.response_mode = "fragment";
-  uriResponse.urlEncoded = encodeURI(
-    `${didAuthResponseCall.redirectUri}#${params}`
-  );
-  return uriResponse;
 };
 
 async function waitToBeMined(txId) {

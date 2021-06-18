@@ -7,13 +7,14 @@ FROM node:14.7.0-alpine
 WORKDIR /usr/src/app
 # Only copy the package.json file to work directory
 COPY ./package.json .
+COPY ./tsconfig.json .
 # Install all Packages
 RUN yarn install
 # Copy all other source code to work directory
 ADD . /usr/src/app
 # TypeScript
-
+#RUN yarn build
 # Start
 
-CMD [ "yarn", "start" ]
+CMD [ "yarn", "dev" ]
 EXPOSE 9080

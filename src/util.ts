@@ -143,7 +143,7 @@ export const serialize = async (object) => {
   }
 };
 
-export const prepareDidDocument =async (
+export const prepareDidDocument = async (
   didUser,
   publicKeyType,
   privateKeyController,
@@ -209,19 +209,26 @@ const constructDidDoc = async (
   publicKey: object,
   didDocument: object
 ): Promise<{ didDoc: object }> => {
-  if (didDocument == null || Object.keys(didDocument).length < 3) return { didDoc: defaultDidDoc(didUser, publicKey) };
+  if (didDocument == null || Object.keys(didDocument).length < 3)
+    return { didDoc: defaultDidDoc(didUser, publicKey) };
   else {
     //\\ TODO: construct the did doc and insert the key properly
-    let doc:object = didDocument;
-    if (!('@context' in didDocument) || doc['@context'].length ==0) doc['@context'] ="https://w3id.org/did/v1";
-    doc['verificationMethod']={
+    let doc: object = didDocument;
+    if (!("@context" in didDocument) || doc["@context"].length == 0)
+      doc["@context"] = "https://w3id.org/did/v1";
+    doc["verificationMethod"] = {
       id: `${didUser}#keys-1`,
       type: "Secp256k1VerificationKey2018",
       controller: didUser,
       ...publicKey,
     };
-    if (!('authentication' in didDocument) || doc['authentication'].length ==0 ) doc['authentication'] =didUser;
-    if (!('assertionMethod' in didDocument)|| doc['assertionMethod'].length ==0) doc['assertionMethod'] =[`${didUser}#keys-1`];
+    if (!("authentication" in didDocument) || doc["authentication"].length == 0)
+      doc["authentication"] = didUser;
+    if (
+      !("assertionMethod" in didDocument) ||
+      doc["assertionMethod"].length == 0
+    )
+      doc["assertionMethod"] = [`${didUser}#keys-1`];
     return { didDoc: doc };
   }
 };
@@ -246,45 +253,49 @@ const defaultDidDoc = (didUser: string, publicKey: object) => {
 export const prepareUpdateDidDocument = (
   didUser,
   publicKeyType,
-  privateKeyController
+  privateKeyController,
+  flag: string,
+  didDoc: any | null
 ) => {
-  let publicKey;
-  const controller = new ethers.Wallet(privateKeyController);
-  switch (publicKeyType) {
-    case "publicKeyHex":
-      publicKey = { publicKeyHex: controller.publicKey.slice(2) };
-      break;
-    case "publicKeyJwk":
-      publicKey = {
-        publicKeyJwk: new EbsiWallet(controller.privateKey).getPublicKey({
-          format: "jwk",
-        }),
-      };
-      break;
-    case "publicKeyBase58":
-      publicKey = {
-        publicKeyBase58: bs58.encode(
-          fromHexString(controller.publicKey.slice(2))
-        ),
-      };
-      break;
-    default:
-      throw new Error(`invalid type ${publicKeyType}`);
+  let didDocument;
+
+  didDocument =
+    didDoc == null || Object.keys(didDoc).length < 3
+      ? resolveDid(didUser)
+      : didDocument;
+
+  if (flag == "updateKey") {
+    didDocument = resolveDid(didUser);
+    let publicKey;
+    const controller = new ethers.Wallet(privateKeyController);
+    switch (publicKeyType) {
+      case "publicKeyHex":
+        publicKey = { publicKeyHex: controller.publicKey.slice(2) };
+        break;
+      case "publicKeyJwk":
+        publicKey = {
+          publicKeyJwk: new EbsiWallet(controller.privateKey).getPublicKey({
+            format: "jwk",
+          }),
+        };
+        break;
+      case "publicKeyBase58":
+        publicKey = {
+          publicKeyBase58: bs58.encode(
+            fromHexString(controller.publicKey.slice(2))
+          ),
+        };
+        break;
+      default:
+        throw new Error(`invalid type ${publicKeyType}`);
+    }
+    didDocument["verificationMethod"] = {
+      id: `${didUser}#keys-1`,
+      type: "Secp256k1VerificationKey2018",
+      controller: didUser,
+      ...publicKey,
+    };
   }
-  const didDocument = {
-    "@context": "https://w3id.org/did/v1",
-    id: didUser,
-    verificationMethod: [
-      {
-        id: `${didUser}#keys-1`,
-        type: "Secp256k1VerificationKey2018",
-        controller: didUser,
-        ...publicKey,
-      },
-    ],
-    authentication: [didUser],
-    assertionMethod: [`${didUser}#keys-1`],
-  };
 
   const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
 
@@ -387,3 +398,23 @@ function paramSignedTransaction(tx, sgnTx) {
     signedRawTransaction: sgnTx,
   };
 }
+
+export const resolveDid = async (
+  did: string
+): Promise<{ didDocument: object }> => {
+  const url = "https://api.preprod.ebsi.eu/did-registry/v2/identifiers/";
+  const encodedDid = "did%3Aebsi%3A" + did.split(":")[2];
+  console.log(`${url + encodedDid}`);
+  let response;
+  axios
+    .get(url + encodedDid, {
+      headers: { "Content-Type": "application/did+ld+json" },
+    })
+    .then((res) => {
+      response = res.data;
+    })
+    .catch((err) => {
+      console.log("AXIOS ERROR: ", err);
+    });
+  return { didDocument: response };
+};
