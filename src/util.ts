@@ -250,7 +250,7 @@ const defaultDidDoc = (didUser: string, publicKey: object) => {
   };
 };
 
-export const prepareUpdateDidDocument = (
+export const prepareUpdateDidDocument = async (
   didUser,
   publicKeyType,
   privateKeyController,
@@ -261,11 +261,13 @@ export const prepareUpdateDidDocument = (
 
   didDocument =
     didDoc == null || Object.keys(didDoc).length < 3
-      ? resolveDid(didUser)
+      ? await resolveDid(didUser)
       : didDocument;
 
   if (flag == "updateKey") {
-    didDocument = resolveDid(didUser);
+    didDocument = await resolveDid(didUser);
+    console.log("resolved Did Doc");
+    console.log(didDocument);
     let publicKey;
     const controller = new ethers.Wallet(privateKeyController);
     switch (publicKeyType) {
@@ -405,16 +407,8 @@ export const resolveDid = async (
   const url = "https://api.preprod.ebsi.eu/did-registry/v2/identifiers/";
   const encodedDid = "did%3Aebsi%3A" + did.split(":")[2];
   console.log(`${url + encodedDid}`);
-  let response;
-  axios
-    .get(url + encodedDid, {
-      headers: { "Content-Type": "application/did+ld+json" },
-    })
-    .then((res) => {
-      response = res.data;
-    })
-    .catch((err) => {
-      console.log("AXIOS ERROR: ", err);
-    });
-  return { didDocument: response };
+  const response = await axios.get(url + encodedDid, {
+    headers: { "Content-Type": "application/did+ld+json" },
+  });
+  return response.data.didDoc;
 };

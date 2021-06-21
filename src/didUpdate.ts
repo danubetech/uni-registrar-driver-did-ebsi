@@ -87,7 +87,7 @@ const buildParams = async (
   flag
 ) => {
   const controllerDid = client.did;
-  const newDidDocument = prepareUpdateDidDocument(
+  const newDidDocument = await prepareUpdateDidDocument(
     controllerDid,
     "publicKeyHex",
     newClient.privateKey,
