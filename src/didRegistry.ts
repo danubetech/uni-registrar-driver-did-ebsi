@@ -3,7 +3,9 @@ import {
   signDidAuthInternal,
   prepareDidDocument,
   jsonrpcSendTransaction,
+  remove0xPrefix,
 } from "./util";
+
 import { userOnBoardAuthReq } from "./userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
@@ -14,20 +16,21 @@ export const didRegistry = async (
   id_token: string,
   didDocument: object
 ): Promise<{ didState: didRegResponse }> => {
-  const keyPairs = await EbsiWallet.generateKeyPair();
+  const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
   const privateKey = "0x" + keyPairs.privateKey;
   let client;
 
   client = new ethers.Wallet(privateKey);
   const did = await EbsiWallet.createDid();
   client.did = did;
-  console.log("did " + did);
   const wallet = new EbsiWallet(privateKey);
+  console.log("did " + did);
+  const publicKeyJwk = wallet.getPublicKey({ format: "jwk" });
+  const key = EbsiWallet.ec.keyFromPrivate(remove0xPrefix(privateKey));
 
-  // Get wallet's public key (different formats)
-  const publicKey = await wallet.getPublicKey();
-  const publicKeyPem = wallet.getPublicKey({ format: "pem" });
-  const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
+  const privateKeyJwk = EbsiWallet.formatPrivateKey(key.getPrivate(), {
+    format: "jwk",
+  });
 
   const idToken =
     id_token != null
@@ -40,22 +43,17 @@ export const didRegistry = async (
     ...buildParam.param,
   };
 
-  const res = await sendApiTransaction(
-    "insertDidDocument",
-    idToken,
-    param,
-    client,
-    () => {
-      console.log(buildParam.info.title);
-      console.log(buildParam.info.data);
-    }
-  );
+  await sendApiTransaction("insertDidDocument", idToken, param, client, () => {
+    console.log(buildParam.info.title);
+    console.log(buildParam.info.data);
+  });
+
   console.log("here....");
   return {
     didState: {
       state: "finished",
       identifier: did,
-      secret: keyPairs,
+      secret: privateKeyJwk,
       didDocument: buildParam.info.data,
     },
   };
@@ -89,7 +87,7 @@ const buildParams = async (client: any, didDocument: object) => {
   const controllerDid = client.did;
   const newDidDocument = await prepareDidDocument(
     controllerDid,
-    "publicKeyHex",
+    "publicKeyJwk",
     client.privateKey,
     didDocument
   );
@@ -232,3 +230,12 @@ interface didRegResponse {
   secret: object;
   didDocument: object;
 }
+
+var __classPrivateFieldGet =
+  (this && __classPrivateFieldGet) ||
+  function (receiver, privateMap) {
+    if (!privateMap.has(receiver)) {
+      throw new TypeError("attempted to get private field on non-instance");
+    }
+    return privateMap.get(receiver);
+  };

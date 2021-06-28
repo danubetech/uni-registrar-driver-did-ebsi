@@ -8,11 +8,18 @@ export const didUpdate = async (
   token: string,
   id_token: string,
   did: string,
-  privateKey: string,
+  privateKeyJWK: object,
   didDocument: object,
   flag: string
 ): Promise<{ didState: didRegResponse }> => {
   let client;
+  let buffer;
+  buffer = privateKeyJWK["d"]
+    ? Buffer.from(privateKeyJWK["d"], "base64")
+    : null;
+  if (buffer == null) throw new Error("Unsupported key format");
+  const privateKey = buffer.toString("hex");
+
   client = new ethers.Wallet("0x" + privateKey);
   client.did = did;
   const wallet = new EbsiWallet("0x" + privateKey);
@@ -89,7 +96,7 @@ const buildParams = async (
   const controllerDid = client.did;
   const newDidDocument = await prepareUpdateDidDocument(
     controllerDid,
-    "publicKeyHex",
+    "publicKeyJwk",
     newClient.privateKey,
     flag,
     didDocument

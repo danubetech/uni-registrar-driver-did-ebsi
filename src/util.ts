@@ -5,8 +5,9 @@ const { EbsiWallet } = require("@cef-ebsi/wallet-lib");
 const { ethers } = require("ethers");
 const elliptic_1 = require("elliptic");
 const js_base64_1 = require("js-base64");
-
 const base64url = require("base64url");
+const buffer_1 = require("buffer");
+
 const {
   createVerifiablePresentation,
 } = require("@cef-ebsi/verifiable-presentation");
@@ -411,4 +412,18 @@ export const resolveDid = async (
     headers: { "Content-Type": "application/did+ld+json" },
   });
   return response.data.didDoc;
+};
+
+export const remove0xPrefix = (str) =>
+  str.startsWith("0x") ? str.slice(2) : str;
+
+export const base64ToBase64Url = (privateKey) => {
+  console.log("here1111111111111.");
+  const privateKeyBuffer = privateKey.toArrayLike(buffer_1.Buffer);
+  console.log("here222222222222.");
+  return privateKeyBuffer
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
 };
