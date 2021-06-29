@@ -47,13 +47,13 @@ export const didRegistry = async (
     console.log(buildParam.info.title);
     console.log(buildParam.info.data);
   });
-
+  const keyObj = { key: [privateKeyJwk] };
   console.log("here....");
   return {
     didState: {
       state: "finished",
       identifier: did,
-      secret: privateKeyJwk,
+      secret: keyObj,
       didDocument: buildParam.info.data,
     },
   };
