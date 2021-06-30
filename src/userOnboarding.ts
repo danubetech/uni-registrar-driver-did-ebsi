@@ -14,7 +14,7 @@ export const userOnBoardAuthReq = async (
 ): Promise<{ id_token: string }> => {
   let response;
 
-  const nonce = uuidv4();
+  const nonce = await uuidv4();
 
   const didAuthResponseJwt = await EbsiDidAuth.createAuthenticationResponse(
     {
@@ -42,10 +42,10 @@ export const userOnBoardAuthReq = async (
       .then((res) => {
         response = res;
       });
-  } catch (err) {
+  } catch (error) {
     // Handle Error Here
-    console.error("error url encoded");
-    throw err.message;
+    console.error(error.message);
+    throw error.message;
   }
   const verifiableCredntial = response.data;
 
