@@ -27,7 +27,8 @@ export const didRegistry = async (
   console.log("did " + did);
   const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
   const key =await  EbsiWallet.ec.keyFromPrivate(remove0xPrefix(privateKey));
-  const privateKeyJwk =await  EbsiWallet.formatPrivateKey(key.getPrivate(), {
+  let privateKeyJwk;
+  privateKeyJwk = await EbsiWallet.formatPrivateKey(key.getPrivate(), {
     format: "jwk",
   });
   console.log("publicKeyJwk....." + JSON.stringify(publicKeyJwk));
@@ -47,7 +48,8 @@ export const didRegistry = async (
     console.log(buildParam.info.title);
     console.log(buildParam.info.data);
   });
-  const keyObj = { key: [privateKeyJwk] };
+  privateKeyJwk["kid"] = did + "#keys-1";
+  const keyObj = { keys: [privateKeyJwk] };
   console.log("here....");
   return {
     didState: {
