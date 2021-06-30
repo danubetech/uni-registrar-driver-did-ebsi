@@ -26,13 +26,12 @@ export const didRegistry = async (
   const wallet =await  new EbsiWallet(privateKey);
   console.log("did " + did);
   const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
-  console.log('publick...'+publicKeyJwk);
   const key =await  EbsiWallet.ec.keyFromPrivate(remove0xPrefix(privateKey));
-  console.log('Key ..'+key);
+  console.log('Key ..'+JSON.stringify(key));
   const privateKeyJwk =await  EbsiWallet.formatPrivateKey(key.getPrivate(), {
     format: "jwk",
   });
-  console.log("privateKeyJwk....."+privateKeyJwk);
+  console.log("privateKeyJwk....."+JSON.stringify(privateKeyJwk));
   const idToken =
     id_token != null
       ? id_token
