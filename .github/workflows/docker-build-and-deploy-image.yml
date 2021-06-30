@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: universalregistrar/driver-did-ebsi:fix-image
+  IMAGE_NAME: universalregistrar/driver-did-ebsi
   PATH_TO_DOCKERFILE: /docker/Dockerfile
   BUILD_CONTEXT: $GITHUB_WORKSPACE
 
