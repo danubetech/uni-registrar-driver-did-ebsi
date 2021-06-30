@@ -14,8 +14,9 @@ export const userOnBoardAuthReq = async (
 ): Promise<{ id_token: string }> => {
   let response;
 
-  const nonce = uuidv4();
-
+  const nonce = await uuidv4();
+  console.log('User onboarding initialted')
+  console.log('Publick Key JWK....'+JSON.stringify(publicKeyJwk))
   const didAuthResponseJwt = await EbsiDidAuth.createAuthenticationResponse(
     {
       hexPrivatekey: client.privateKey,
@@ -42,10 +43,10 @@ export const userOnBoardAuthReq = async (
       .then((res) => {
         response = res;
       });
-  } catch (err) {
+  } catch (error) {
     // Handle Error Here
-    console.error("error url encoded");
-    throw err.message;
+    console.error(error.message);
+    throw error.message;
   }
   const verifiableCredntial = response.data;
 
