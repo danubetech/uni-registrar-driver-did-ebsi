@@ -23,16 +23,15 @@ export const didRegistry = async (
   client = new ethers.Wallet(privateKey);
   const did = await EbsiWallet.createDid();
   client.did = did;
-  const wallet =await  new EbsiWallet(privateKey);
+  const wallet = await new EbsiWallet(privateKey);
   console.log("did " + did);
   const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
-  const key =await  EbsiWallet.ec.keyFromPrivate(remove0xPrefix(privateKey));
+  const key = await EbsiWallet.ec.keyFromPrivate(remove0xPrefix(privateKey));
   let privateKeyJwk;
   privateKeyJwk = await EbsiWallet.formatPrivateKey(key.getPrivate(), {
     format: "jwk",
   });
   console.log("publicKeyJwk....." + JSON.stringify(publicKeyJwk));
-  console.log("privateKeyJwk....."+JSON.stringify(privateKeyJwk));
   const idToken =
     id_token != null
       ? id_token

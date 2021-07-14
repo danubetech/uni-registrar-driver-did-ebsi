@@ -15,8 +15,7 @@ export const userOnBoardAuthReq = async (
   let response;
 
   const nonce = await uuidv4();
-  console.log('User onboarding initialted')
-  console.log('Publick Key JWK....'+JSON.stringify(publicKeyJwk))
+  console.log("User onboarding initialted");
   const didAuthResponseJwt = await EbsiDidAuth.createAuthenticationResponse(
     {
       hexPrivatekey: client.privateKey,
