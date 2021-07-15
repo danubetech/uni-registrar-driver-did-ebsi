@@ -223,14 +223,16 @@ const constructDidDoc = async (
         "https://w3id.org/security/suites/ed25519-2020/v1",
       ];
     doc["id"] = didUser;
-    doc["verificationMethod"] = {
-      id: `${didUser}#keys-1`,
-      type: "Secp256k1VerificationKey2018",
-      controller: didUser,
-      ...publicKey,
-    };
+    doc["verificationMethod"] = [
+      {
+        id: `${didUser}#keys-1`,
+        type: "Secp256k1VerificationKey2018",
+        controller: didUser,
+        ...publicKey,
+      },
+    ];
     if (!("authentication" in didDocument) || doc["authentication"].length == 0)
-      doc["authentication"] = didUser;
+      doc["authentication"] = [`${didUser}#keys-1`];
     if (
       !("assertionMethod" in didDocument) ||
       doc["assertionMethod"].length == 0
@@ -242,10 +244,7 @@ const constructDidDoc = async (
 
 const defaultDidDoc = (didUser: string, publicKey: object) => {
   return {
-    "@context": [
-      "https://w3id.org/did/v1",
-      "https://w3id.org/security/suites/ed25519-2020/v1",
-    ],
+    "@context": "https://w3id.org/did/v1",
     id: didUser,
     verificationMethod: [
       {
@@ -255,7 +254,7 @@ const defaultDidDoc = (didUser: string, publicKey: object) => {
         ...publicKey,
       },
     ],
-    authentication: [didUser],
+    authentication: [`${didUser}#keys-1`],
     assertionMethod: [`${didUser}#keys-1`],
   };
 };
