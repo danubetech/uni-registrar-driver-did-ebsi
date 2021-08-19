@@ -49,7 +49,6 @@ export const didRegistry = async (
   });
   privateKeyJwk["kid"] = did + "#keys-1";
   const keyObj = { keys: [privateKeyJwk] };
-  console.log("here....");
   return {
     didState: {
       state: "finished",
@@ -80,17 +79,16 @@ const sendApiTransaction = async (
   if (response.status < 400 && (await waitToBeMined(response.data.result))) {
     callback();
   }
-
   return response.data;
 };
 
-const buildParams = async (client: any, didDocument: object) => {
+const buildParams = async (client: any, didDoc: object) => {
   const controllerDid = client.did;
   const newDidDocument = await prepareDidDocument(
     controllerDid,
     "publicKeyJwk",
     client.privateKey,
-    didDocument
+    didDoc
   );
 
   const {
@@ -182,6 +180,7 @@ const createAuthenticationResponses = async (didAuthResponseCall, jwk) => {
 async function waitToBeMined(txId) {
   let mined = false;
   let receipt = null;
+  console.log(txId);
 
   // if (!oauth2token) {
   //   utils.yellow(
@@ -202,28 +201,6 @@ async function waitToBeMined(txId) {
   // if('statreturn Number(receipt.status?) === 1;us' in receipt)
   return 0;
 }
-
-// async function getLedgerTx(txId) {
-//   const url = `https://api.preprod.ebsi.eu/ledger/v2/blockchains/besu`;
-//   const body = jsonrpcBody("eth_getTransactionReceipt", txId);
-//   const response = await axios.post(url, body, {
-//     headers: { Authorization: `Bearer ${token2}` },
-//   });
-
-//   if (response.status > 400) throw new Error(response.data);
-//   const receipt = response.data.result;
-//   if (receipt && Number(receipt.status) !== 1) {
-//     console.log(`Transaction failed: Status ${receipt.status}`);
-//     if (receipt.revertReason)
-//       console.log(
-//         `revertReason: ${Buffer.from(
-//           receipt.revertReason.slice(2),
-//           "hex"
-//         ).toString()}`
-//       );
-//   }
-//   return receipt;
-// }
 
 interface didRegResponse {
   state;

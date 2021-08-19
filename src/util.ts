@@ -186,7 +186,7 @@ export const prepareDidDocument = async (
     canonicalizedDidDocumentBuffer
   );
 
-  const timestampDataBuffer = Buffer.from(JSON.stringify({ data: "test" }));
+  const timestampDataBuffer = Buffer.from(JSON.stringify({ time: Date.now() }));
   const didVersionMetadata = {
     meta: crypto.randomBytes(32).toString("hex"),
   };
@@ -317,7 +317,7 @@ export const prepareUpdateDidDocument = async (
     canonicalizedDidDocumentBuffer
   );
 
-  const timestampDataBuffer = Buffer.from(JSON.stringify({ data: "update" }));
+  const timestampDataBuffer = Buffer.from(JSON.stringify({ time: Date.now() }));
   const didVersionMetadata = {
     meta: crypto.randomBytes(32).toString("hex"),
   };
@@ -352,11 +352,9 @@ export const jsonrpcSendTransaction = async (
   param
 ) => {
   const body = jsonrpcBody(method, [param]);
-  console.log("start");
   const response = await axios.post(url, body, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  console.log("end");
   const unsignedTransaction = response.data.result;
   const uTx = formatEthersUnsignedTransaction(
     JSON.parse(JSON.stringify(unsignedTransaction))
@@ -366,7 +364,7 @@ export const jsonrpcSendTransaction = async (
   uTx.chainId = Number(uTx.chainId);
 
   const sgnTx = await client.signTransaction(uTx);
-  console.log("unsigned tx");
+  console.log("signed tx");
   console.log(sgnTx);
   const bodySend = jsonrpcBody("signedTransaction", [
     paramSignedTransaction(unsignedTransaction, sgnTx),
@@ -426,12 +424,32 @@ export const remove0xPrefix = (str) =>
   str.startsWith("0x") ? str.slice(2) : str;
 
 export const base64ToBase64Url = (privateKey) => {
-  console.log("here1111111111111.");
   const privateKeyBuffer = privateKey.toArrayLike(buffer_1.Buffer);
-  console.log("here222222222222.");
   return privateKeyBuffer
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=/g, "");
 };
+
+export async function getLedgerTx(txId, token) {
+  const url = `https://api.preprod.ebsi.eu/ledger/v2/blockchains/besu`;
+  const body = jsonrpcBody("eth_getTransactionReceipt", txId);
+  const response = await axios.post(url, body, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (response.status > 400) throw new Error(response.data);
+  const receipt = response.data.result;
+  if (receipt && Number(receipt.status) !== 1) {
+    console.log(`Transaction failed: Status ${receipt.status}`);
+    if (receipt.revertReason)
+      console.log(
+        `revertReason: ${Buffer.from(
+          receipt.revertReason.slice(2),
+          "hex"
+        ).toString()}`
+      );
+  }
+  return receipt;
+}

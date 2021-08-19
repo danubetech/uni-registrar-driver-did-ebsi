@@ -44,6 +44,7 @@ export const userOnBoardAuthReq = async (
       });
   } catch (error) {
     // Handle Error Here
+    console.log("User Onboarding error");
     console.error(error.message);
     throw error.message;
   }
