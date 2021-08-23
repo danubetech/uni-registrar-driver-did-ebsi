@@ -10,7 +10,7 @@ export const didUpdate = async (
   did: string,
   privateKeyJWK: object,
   didDocument: object,
-  flag: string
+  options: any
 ): Promise<{ didState: didRegResponse }> => {
   let client;
   let buffer;
@@ -19,6 +19,7 @@ export const didUpdate = async (
     : null;
   if (buffer == null) throw new Error("Unsupported key format");
   const privateKey = buffer.toString("hex");
+  const flag = options.flag;
 
   client = new ethers.Wallet("0x" + privateKey);
   client.did = did;
@@ -33,23 +34,28 @@ export const didUpdate = async (
       : await (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
 
   // Creates a URI using the wallet backend that manages entity DID keys
-
-  const buildParam = await buildParams(newClient, client, didDocument, flag);
+  let method = "updateDidDocument";
+  let buildParam;
+  if (options.method == "insertDidController") {
+    method = options.method;
+    buildParam = await buildDidControllerParams(
+      client.did,
+      options.controllerDID
+    );
+  } else if (options.method == "updateDidController") {
+    method = options.method;
+  } else {
+    buildParam = await buildParams(newClient, client, didDocument, flag);
+  }
   let param = {
     from: client.address,
     ...buildParam.param,
   };
 
-  const res = await sendApiTransaction(
-    "updateDidDocument",
-    idToken,
-    param,
-    client,
-    () => {
-      console.log(buildParam.info.title);
-      console.log(buildParam.info.data);
-    }
-  );
+  const res = await sendApiTransaction(method, idToken, param, client, () => {
+    console.log(buildParam.info.title);
+    console.log(buildParam.info.data);
+  });
   console.log("did doc updated");
   //client = newClient;
   console.log("here....");
@@ -126,6 +132,18 @@ const buildParams = async (
       didVersionInfo,
       timestampData,
       didVersionMetadata,
+    },
+  };
+};
+
+const buildDidControllerParams = async (did: any, newController: any) => {
+  return {
+    info: { title: `New controller for ${did}`, data: newController },
+    param: {
+      identifier: `0x${Buffer.from(did).toString("hex")}`,
+      newControllerId: newController,
+      notBefore: Math.round(Date.now() / 1000),
+      notAfter: Math.round(Date.now() / 1000),
     },
   };
 };

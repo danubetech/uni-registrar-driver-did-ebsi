@@ -36,7 +36,7 @@ didUpdateDoc.post("/", async (req: Request, res: Response) => {
       req.body.identifier,
       req.body.secret.privateKey,
       req.body.didDocument,
-      req.body.options.flag
+      req.body.options
     );
     //console.log(req.body.data)
     //const response = await initializer.initialize(req.body.credential);

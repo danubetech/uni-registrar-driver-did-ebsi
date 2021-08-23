@@ -21,12 +21,13 @@ export const createDidAuthResponsePayload = async (
 ): Promise<{ ResponsePayload: object }> => {
   const responsePayload = {
     iss: "https://self-issued.me",
-    sub: await getThumbprint(input.hexPrivatekey, jwk.kid),
+    sub: await getThumbprint(input.hexPrivatekey),
     aud: input.redirectUri,
     nonce: input.nonce,
     sub_jwk: jwk,
     claims: input.claims,
   };
+  console.log(jwk.kid);
   return { ResponsePayload: responsePayload };
 };
 
@@ -41,8 +42,8 @@ const getJWK = (hexPrivateKey, kid) => {
   };
 };
 
-const getThumbprint = async (hexPrivateKey, kid) => {
-  const jwk = getJWK(hexPrivateKey, kid);
+const getThumbprint = async (hexPrivateKey) => {
+  //const jwk = getJWK(hexPrivateKey, kid);
   const thumbprint = ""; //await thumbprint_1.calculateThumbprint(jwk, "sha256");
   return thumbprint;
 };
@@ -186,7 +187,7 @@ export const prepareDidDocument = async (
     canonicalizedDidDocumentBuffer
   );
 
-  const timestampDataBuffer = Buffer.from(JSON.stringify({ data: "test" }));
+  const timestampDataBuffer = Buffer.from(JSON.stringify({ time: Date.now() }));
   const didVersionMetadata = {
     meta: crypto.randomBytes(32).toString("hex"),
   };
@@ -320,7 +321,7 @@ export const prepareUpdateDidDocument = async (
     canonicalizedDidDocumentBuffer
   );
 
-  const timestampDataBuffer = Buffer.from(JSON.stringify({ data: "update" }));
+  const timestampDataBuffer = Buffer.from(JSON.stringify({ time: Date.now() }));
   const didVersionMetadata = {
     meta: crypto.randomBytes(32).toString("hex"),
   };
@@ -355,11 +356,9 @@ export const jsonrpcSendTransaction = async (
   param
 ) => {
   const body = jsonrpcBody(method, [param]);
-  console.log("start");
   const response = await axios.post(url, body, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  console.log("end");
   const unsignedTransaction = response.data.result;
   const uTx = formatEthersUnsignedTransaction(
     JSON.parse(JSON.stringify(unsignedTransaction))
@@ -369,7 +368,7 @@ export const jsonrpcSendTransaction = async (
   uTx.chainId = Number(uTx.chainId);
 
   const sgnTx = await client.signTransaction(uTx);
-  console.log("unsigned tx");
+  console.log("signed tx");
   console.log(sgnTx);
   const bodySend = jsonrpcBody("signedTransaction", [
     paramSignedTransaction(unsignedTransaction, sgnTx),
@@ -429,12 +428,86 @@ export const remove0xPrefix = (str) =>
   str.startsWith("0x") ? str.slice(2) : str;
 
 export const base64ToBase64Url = (privateKey) => {
-  console.log("here1111111111111.");
   const privateKeyBuffer = privateKey.toArrayLike(buffer_1.Buffer);
-  console.log("here222222222222.");
   return privateKeyBuffer
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=/g, "");
 };
+
+export async function getLedgerTx(txId, token) {
+  const url = `https://api.preprod.ebsi.eu/ledger/v2/blockchains/besu`;
+  const body = jsonrpcBody("eth_getTransactionReceipt", txId);
+  const response = await axios.post(url, body, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (response.status > 400) throw new Error(response.data);
+  const receipt = response.data.result;
+  if (receipt && Number(receipt.status) !== 1) {
+    console.log(`Transaction failed: Status ${receipt.status}`);
+    if (receipt.revertReason)
+      console.log(
+        `revertReason: ${Buffer.from(
+          receipt.revertReason.slice(2),
+          "hex"
+        ).toString()}`
+      );
+  }
+  return receipt;
+}
+
+export async function createAuthenticationResponse(didAuthResponseCall) {
+  if (
+    !didAuthResponseCall ||
+    !didAuthResponseCall.hexPrivatekey ||
+    !didAuthResponseCall.did ||
+    !didAuthResponseCall.redirectUri
+  )
+    throw new Error("Invalid parmas");
+  const payload = await createAuthenticationResponsePayload(
+    didAuthResponseCall
+  );
+  // signs payload using internal libraries
+  const jwt = await signDidAuthInternal(
+    didAuthResponseCall.did,
+    payload,
+    didAuthResponseCall.hexPrivatekey
+  );
+  const params = `id_token=${jwt}`;
+  let uriResponse = {
+    urlEncoded: "",
+    bodyEncoded: "",
+    encoding: "application/x-www-form-urlencoded",
+    response_mode: didAuthResponseCall.response_mode
+      ? didAuthResponseCall.response_mode
+      : "fragment", // FRAGMENT is the default
+  };
+  if (didAuthResponseCall.response_mode === "form_post") {
+    uriResponse.urlEncoded = encodeURI(didAuthResponseCall.redirectUri);
+    uriResponse.bodyEncoded = encodeURI(params);
+    return uriResponse;
+  }
+  if (didAuthResponseCall.response_mode === "query") {
+    uriResponse.urlEncoded = encodeURI(
+      `${didAuthResponseCall.redirectUri}?${params}`
+    );
+    return uriResponse;
+  }
+  uriResponse.response_mode = "fragment";
+  uriResponse.urlEncoded = encodeURI(`${jwt}`);
+  return uriResponse;
+}
+
+async function createAuthenticationResponsePayload(input) {
+  const responsePayload = {
+    iss: "https://self-issued.me",
+    sub: await getThumbprint(input.hexPrivatekey),
+    aud: input.redirectUri,
+    nonce: input.nonce,
+    sub_jwk: getJWK(input.hexPrivatekey, `${input.did}#key-1`),
+    claims: input.claims,
+  };
+  return responsePayload;
+}

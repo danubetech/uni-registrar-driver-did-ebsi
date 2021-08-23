@@ -1,6 +1,4 @@
 import {
-  createDidAuthResponsePayload,
-  signDidAuthInternal,
   prepareDidDocument,
   jsonrpcSendTransaction,
   remove0xPrefix,
@@ -49,7 +47,6 @@ export const didRegistry = async (
   });
   privateKeyJwk["kid"] = did + "#keys-1";
   const keyObj = { keys: [privateKeyJwk] };
-  console.log("here....");
   return {
     didState: {
       state: "finished",
@@ -80,17 +77,16 @@ const sendApiTransaction = async (
   if (response.status < 400 && (await waitToBeMined(response.data.result))) {
     callback();
   }
-
   return response.data;
 };
 
-const buildParams = async (client: any, didDocument: object) => {
+const buildParams = async (client: any, didDoc: object) => {
   const controllerDid = client.did;
   const newDidDocument = await prepareDidDocument(
     controllerDid,
     "publicKeyJwk",
     client.privateKey,
-    didDocument
+    didDoc
   );
 
   const {
@@ -122,66 +118,10 @@ const buildParams = async (client: any, didDocument: object) => {
   };
 };
 
-const createDidAuthRequestPayload = async (
-  input
-): Promise<{ RequestPayload: object }> => {
-  const requestPayload = {
-    iss: input.issuer,
-    scope: "open_id did_authn",
-    response_type: "id_token",
-    client_id: input.redirectUri,
-    nonce: uuid_1.v4(),
-    claims: input.claims,
-  };
-  return { RequestPayload: requestPayload };
-};
-
-const createAuthenticationResponses = async (didAuthResponseCall, jwk) => {
-  if (
-    !didAuthResponseCall ||
-    !didAuthResponseCall.hexPrivatekey ||
-    !didAuthResponseCall.did ||
-    !didAuthResponseCall.redirectUri
-  )
-    throw new Error("Invalid params");
-
-  const payload = await createDidAuthResponsePayload(didAuthResponseCall, jwk);
-  //console.log(payload);
-  // signs payload using internal libraries
-  const jwt = await signDidAuthInternal(
-    didAuthResponseCall.did,
-    payload,
-    didAuthResponseCall.hexPrivatekey
-  );
-  const params = `id_token=${jwt}`;
-  const uriResponse = {
-    urlEncoded: "",
-    encoding: "application/x-www-form-urlencoded",
-    response_mode: didAuthResponseCall.response_mode
-      ? didAuthResponseCall.response_mode
-      : "fragment", // FRAGMENT is the default
-  };
-  if (didAuthResponseCall.response_mode === "form_post") {
-    uriResponse.urlEncoded = encodeURI(didAuthResponseCall.redirectUri);
-    //uriResponse.bodyEncoded = encodeURI(params);
-    return uriResponse;
-  }
-  if (didAuthResponseCall.response_mode === "query") {
-    uriResponse.urlEncoded = encodeURI(
-      `${didAuthResponseCall.redirectUri}?${params}`
-    );
-    return uriResponse;
-  }
-  uriResponse.response_mode = "fragment";
-  uriResponse.urlEncoded = encodeURI(
-    `${didAuthResponseCall.redirectUri}#${params}`
-  );
-  return uriResponse;
-};
-
 async function waitToBeMined(txId) {
   let mined = false;
   let receipt = null;
+  console.log(txId);
 
   // if (!oauth2token) {
   //   utils.yellow(
@@ -202,28 +142,6 @@ async function waitToBeMined(txId) {
   // if('statreturn Number(receipt.status?) === 1;us' in receipt)
   return 0;
 }
-
-// async function getLedgerTx(txId) {
-//   const url = `https://api.preprod.ebsi.eu/ledger/v2/blockchains/besu`;
-//   const body = jsonrpcBody("eth_getTransactionReceipt", txId);
-//   const response = await axios.post(url, body, {
-//     headers: { Authorization: `Bearer ${token2}` },
-//   });
-
-//   if (response.status > 400) throw new Error(response.data);
-//   const receipt = response.data.result;
-//   if (receipt && Number(receipt.status) !== 1) {
-//     console.log(`Transaction failed: Status ${receipt.status}`);
-//     if (receipt.revertReason)
-//       console.log(
-//         `revertReason: ${Buffer.from(
-//           receipt.revertReason.slice(2),
-//           "hex"
-//         ).toString()}`
-//       );
-//   }
-//   return receipt;
-// }
 
 interface didRegResponse {
   state;
