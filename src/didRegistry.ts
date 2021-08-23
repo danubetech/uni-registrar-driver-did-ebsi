@@ -1,6 +1,4 @@
 import {
-  createDidAuthResponsePayload,
-  signDidAuthInternal,
   prepareDidDocument,
   jsonrpcSendTransaction,
   remove0xPrefix,
@@ -118,63 +116,6 @@ const buildParams = async (client: any, didDoc: object) => {
       didVersionMetadata,
     },
   };
-};
-
-const createDidAuthRequestPayload = async (
-  input
-): Promise<{ RequestPayload: object }> => {
-  const requestPayload = {
-    iss: input.issuer,
-    scope: "open_id did_authn",
-    response_type: "id_token",
-    client_id: input.redirectUri,
-    nonce: uuid_1.v4(),
-    claims: input.claims,
-  };
-  return { RequestPayload: requestPayload };
-};
-
-const createAuthenticationResponses = async (didAuthResponseCall, jwk) => {
-  if (
-    !didAuthResponseCall ||
-    !didAuthResponseCall.hexPrivatekey ||
-    !didAuthResponseCall.did ||
-    !didAuthResponseCall.redirectUri
-  )
-    throw new Error("Invalid params");
-
-  const payload = await createDidAuthResponsePayload(didAuthResponseCall, jwk);
-  //console.log(payload);
-  // signs payload using internal libraries
-  const jwt = await signDidAuthInternal(
-    didAuthResponseCall.did,
-    payload,
-    didAuthResponseCall.hexPrivatekey
-  );
-  const params = `id_token=${jwt}`;
-  const uriResponse = {
-    urlEncoded: "",
-    encoding: "application/x-www-form-urlencoded",
-    response_mode: didAuthResponseCall.response_mode
-      ? didAuthResponseCall.response_mode
-      : "fragment", // FRAGMENT is the default
-  };
-  if (didAuthResponseCall.response_mode === "form_post") {
-    uriResponse.urlEncoded = encodeURI(didAuthResponseCall.redirectUri);
-    //uriResponse.bodyEncoded = encodeURI(params);
-    return uriResponse;
-  }
-  if (didAuthResponseCall.response_mode === "query") {
-    uriResponse.urlEncoded = encodeURI(
-      `${didAuthResponseCall.redirectUri}?${params}`
-    );
-    return uriResponse;
-  }
-  uriResponse.response_mode = "fragment";
-  uriResponse.urlEncoded = encodeURI(
-    `${didAuthResponseCall.redirectUri}#${params}`
-  );
-  return uriResponse;
 };
 
 async function waitToBeMined(txId) {

@@ -21,12 +21,13 @@ export const createDidAuthResponsePayload = async (
 ): Promise<{ ResponsePayload: object }> => {
   const responsePayload = {
     iss: "https://self-issued.me",
-    sub: await getThumbprint(input.hexPrivatekey, jwk.kid),
+    sub: await getThumbprint(input.hexPrivatekey),
     aud: input.redirectUri,
     nonce: input.nonce,
     sub_jwk: jwk,
     claims: input.claims,
   };
+  console.log(jwk.kid);
   return { ResponsePayload: responsePayload };
 };
 
@@ -41,8 +42,8 @@ const getJWK = (hexPrivateKey, kid) => {
   };
 };
 
-const getThumbprint = async (hexPrivateKey, kid) => {
-  const jwk = getJWK(hexPrivateKey, kid);
+const getThumbprint = async (hexPrivateKey) => {
+  //const jwk = getJWK(hexPrivateKey, kid);
   const thumbprint = ""; //await thumbprint_1.calculateThumbprint(jwk, "sha256");
   return thumbprint;
 };
@@ -452,4 +453,60 @@ export async function getLedgerTx(txId, token) {
       );
   }
   return receipt;
+}
+
+export async function createAuthenticationResponse(didAuthResponseCall) {
+  if (
+    !didAuthResponseCall ||
+    !didAuthResponseCall.hexPrivatekey ||
+    !didAuthResponseCall.did ||
+    !didAuthResponseCall.redirectUri
+  )
+    throw new Error("Invalid parmas");
+  const payload = await createAuthenticationResponsePayload(
+    didAuthResponseCall
+  );
+  // signs payload using internal libraries
+  const jwt = await signDidAuthInternal(
+    didAuthResponseCall.did,
+    payload,
+    didAuthResponseCall.hexPrivatekey
+  );
+  const params = `id_token=${jwt}`;
+  let uriResponse = {
+    urlEncoded: "",
+    bodyEncoded: "",
+    encoding: "application/x-www-form-urlencoded",
+    response_mode: didAuthResponseCall.response_mode
+      ? didAuthResponseCall.response_mode
+      : "fragment", // FRAGMENT is the default
+  };
+  if (didAuthResponseCall.response_mode === "form_post") {
+    uriResponse.urlEncoded = encodeURI(didAuthResponseCall.redirectUri);
+    uriResponse.bodyEncoded = encodeURI(params);
+    return uriResponse;
+  }
+  if (didAuthResponseCall.response_mode === "query") {
+    uriResponse.urlEncoded = encodeURI(
+      `${didAuthResponseCall.redirectUri}?${params}`
+    );
+    return uriResponse;
+  }
+  uriResponse.response_mode = "fragment";
+  uriResponse.urlEncoded = encodeURI(
+    `${didAuthResponseCall.redirectUri}#${params}`
+  );
+  return uriResponse;
+}
+
+async function createAuthenticationResponsePayload(input) {
+  const responsePayload = {
+    iss: "https://self-issued.me",
+    sub: await getThumbprint(input.hexPrivatekey),
+    aud: input.redirectUri,
+    nonce: input.nonce,
+    sub_jwk: getJWK(input.hexPrivatekey, `${input.did}#key-1`),
+    claims: input.claims,
+  };
+  return responsePayload;
 }

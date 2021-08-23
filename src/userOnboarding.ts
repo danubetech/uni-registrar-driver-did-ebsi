@@ -1,11 +1,11 @@
 import axios from "axios";
-import { createVP } from "./util";
+import { createVP, createAuthenticationResponse } from "./util";
 
 const { v4: uuidv4 } = require("uuid");
 const base64url = require("base64url");
 const canonicalize = require("canonicalize");
 const querystring = require("querystring");
-const { EbsiDidAuth, Agent } = require("@cef-ebsi/siop-auth");
+const { Agent } = require("@cef-ebsi/siop-auth");
 
 export const userOnBoardAuthReq = async (
   token: string,
@@ -16,15 +16,12 @@ export const userOnBoardAuthReq = async (
 
   const nonce = await uuidv4();
   console.log("User onboarding initialted");
-  const didAuthResponseJwt = await EbsiDidAuth.createAuthenticationResponse(
-    {
-      hexPrivatekey: client.privateKey,
-      did: client.did,
-      nonce,
-      redirectUri: `https://api.preprod.ebsi.eu/users-onboarding/v1/authentication-responses`,
-    },
-    publicKeyJwk
-  );
+  const didAuthResponseJwt = await createAuthenticationResponse({
+    hexPrivatekey: client.privateKey,
+    did: client.did,
+    nonce,
+    redirectUri: `https://api.preprod.ebsi.eu/users-onboarding/v1/authentication-responses`,
+  });
   console.log(didAuthResponseJwt);
   try {
     await axios
@@ -45,7 +42,7 @@ export const userOnBoardAuthReq = async (
   } catch (error) {
     // Handle Error Here
     console.log("User Onboarding error");
-    console.error(error.message);
+    console.error(error);
     throw error.message;
   }
   const verifiableCredntial = response.data;
@@ -63,19 +60,17 @@ export const userOnBoardAuthReq = async (
     canonicalize(verifiablePresentation)
   );
 
-  const authenticationResponse = await EbsiDidAuth.createAuthenticationResponse(
-    {
-      hexPrivatekey: client.privateKey,
-      did: client.did,
-      nonce,
-      redirectUri: "/siop-sessions",
-      response_mode: "form_post",
-      claims: {
-        verified_claims: canonicalizedVP,
-        encryption_key: publicKeyJwk,
-      },
-    }
-  );
+  const authenticationResponse = await createAuthenticationResponse({
+    hexPrivatekey: client.privateKey,
+    did: client.did,
+    nonce,
+    redirectUri: "/siop-sessions",
+    response_mode: "form_post",
+    claims: {
+      verified_claims: canonicalizedVP,
+      encryption_key: publicKeyJwk,
+    },
+  });
 
   const authResponseDecoded = querystring.decode(
     authenticationResponse.bodyEncoded
