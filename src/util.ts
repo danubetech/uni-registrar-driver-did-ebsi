@@ -493,9 +493,7 @@ export async function createAuthenticationResponse(didAuthResponseCall) {
     return uriResponse;
   }
   uriResponse.response_mode = "fragment";
-  uriResponse.urlEncoded = encodeURI(
-    `${didAuthResponseCall.redirectUri}#${params}`
-  );
+  uriResponse.urlEncoded = encodeURI(`${jwt}`);
   return uriResponse;
 }
 
