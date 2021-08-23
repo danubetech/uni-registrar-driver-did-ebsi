@@ -14,22 +14,7 @@ const {
 const canonicalize = require("canonicalize");
 const bs58 = require("bs58");
 const crypto = require("crypto");
-
-export const createDidAuthResponsePayload = async (
-  input,
-  jwk
-): Promise<{ ResponsePayload: object }> => {
-  const responsePayload = {
-    iss: "https://self-issued.me",
-    sub: await getThumbprint(input.hexPrivatekey),
-    aud: input.redirectUri,
-    nonce: input.nonce,
-    sub_jwk: jwk,
-    claims: input.claims,
-  };
-  console.log(jwk.kid);
-  return { ResponsePayload: responsePayload };
-};
+const thumbprint_1 = require("jose/jwk/thumbprint");
 
 const getJWK = (hexPrivateKey, kid) => {
   const { x, y } = getECKeyfromHexPrivateKey(hexPrivateKey);
@@ -42,9 +27,9 @@ const getJWK = (hexPrivateKey, kid) => {
   };
 };
 
-const getThumbprint = async (hexPrivateKey) => {
-  //const jwk = getJWK(hexPrivateKey, kid);
-  const thumbprint = ""; //await thumbprint_1.calculateThumbprint(jwk, "sha256");
+const getThumbprint = async (hexPrivateKey, kid) => {
+  const jwk = getJWK(hexPrivateKey, kid);
+  const thumbprint = await thumbprint_1.calculateThumbprint(jwk, "sha256");
   return thumbprint;
 };
 
@@ -353,6 +338,7 @@ export const jsonrpcSendTransaction = async (
   param
 ) => {
   const body = jsonrpcBody(method, [param]);
+  console.log(JSON.stringify(param));
   const response = await axios.post(url, body, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -500,7 +486,7 @@ export async function createAuthenticationResponse(didAuthResponseCall) {
 async function createAuthenticationResponsePayload(input) {
   const responsePayload = {
     iss: "https://self-issued.me",
-    sub: await getThumbprint(input.hexPrivatekey),
+    sub: await getThumbprint(input.hexPrivatekey, null),
     aud: input.redirectUri,
     nonce: input.nonce,
     sub_jwk: getJWK(input.hexPrivatekey, `${input.did}#key-1`),
