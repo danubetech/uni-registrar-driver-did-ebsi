@@ -192,14 +192,14 @@ const constructDidDoc = async (
     let doc: object = didDocument;
     if (!("@context" in didDocument) || doc["@context"].length == 0)
       doc["@context"] = [
-        "https://w3id.org/did/v1",
-        "https://w3id.org/security/suites/ed25519-2020/v1",
+        "https://www.w3.org/ns/did/v1",
+        "https://w3id.org/security/suites/secp256k1-2019/v1",
       ];
     doc["id"] = didUser;
     doc["verificationMethod"] = [
       {
         id: `${didUser}#keys-1`,
-        type: "Secp256k1VerificationKey2018",
+        type: "EcdsaSecp256k1VerificationKey2019",
         controller: didUser,
         ...publicKey,
       },
@@ -217,12 +217,15 @@ const constructDidDoc = async (
 
 const defaultDidDoc = (didUser: string, publicKey: object) => {
   return {
-    "@context": "https://w3id.org/did/v1",
+    "@context": [
+      "https://www.w3.org/ns/did/v1",
+      "https://w3id.org/security/suites/secp256k1-2019/v1",
+    ],
     id: didUser,
     verificationMethod: [
       {
         id: `${didUser}#keys-1`,
-        type: "Secp256k1VerificationKey2018",
+        type: "EcdsaSecp256k1VerificationKey2019",
         controller: didUser,
         ...publicKey,
       },
