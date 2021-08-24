@@ -163,32 +163,19 @@ export const prepareDidDocument = async (
     await constructDidDoc(didUser, publicKey, reqDidDoc)
   ).didDoc;
 
-  const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
-
-  const canonicalizedDidDocument = canonicalize(didDocument);
-
-  const canonicalizedDidDocumentBuffer = Buffer.from(canonicalizedDidDocument);
-  const canonicalizedDidDocumentHash = ethers.utils.sha256(
-    canonicalizedDidDocumentBuffer
-  );
-
-  const timestampDataBuffer = Buffer.from(JSON.stringify({ time: Date.now() }));
+  const timestampData = { data: crypto.randomBytes(32).toString("hex") };
   const didVersionMetadata = {
     meta: crypto.randomBytes(32).toString("hex"),
   };
+
+  const timestampDataBuffer = Buffer.from(JSON.stringify(timestampData));
   const didVersionMetadataBuffer = Buffer.from(
     JSON.stringify(didVersionMetadata)
   );
 
   return {
     didDocument,
-    didDocumentBuffer,
-    canonicalizedDidDocument,
-    canonicalizedDidDocumentBuffer,
-    canonicalizedDidDocumentHash,
-    controllerDid: didUser,
     timestampDataBuffer,
-    didVersionMetadata,
     didVersionMetadataBuffer,
   };
 };
