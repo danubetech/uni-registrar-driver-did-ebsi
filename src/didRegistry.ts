@@ -90,30 +90,26 @@ const buildParams = async (client: any, didDoc: object) => {
   );
 
   const {
-    didDocumentBuffer,
-    canonicalizedDidDocumentHash,
+    didDocument,
     timestampDataBuffer,
     didVersionMetadataBuffer,
   } = newDidDocument;
   console.log(newDidDocument);
 
-  const identifier = `0x${Buffer.from(controllerDid).toString("hex")}`;
-  const didVersionInfo = `0x${didDocumentBuffer.toString("hex")}`;
-  const timestampData = `0x${timestampDataBuffer.toString("hex")}`;
-  const didVersionMetadata = `0x${didVersionMetadataBuffer.toString("hex")}`;
+  const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
 
   return {
     info: {
       title: "Did document",
-      data: newDidDocument.didDocument,
+      data: didDocument,
     },
     param: {
-      identifier,
+      identifier: `0x${Buffer.from(controllerDid).toString("hex")}`,
       hashAlgorithmId: 1,
-      hashValue: canonicalizedDidDocumentHash,
-      didVersionInfo,
-      timestampData,
-      didVersionMetadata,
+      hashValue: ethers.utils.sha256(didDocumentBuffer),
+      didVersionInfo: `0x${didDocumentBuffer.toString("hex")}`,
+      timestampData: `0x${timestampDataBuffer.toString("hex")}`,
+      didVersionMetadata: `0x${didVersionMetadataBuffer.toString("hex")}`,
     },
   };
 };

@@ -14,22 +14,7 @@ const {
 const canonicalize = require("canonicalize");
 const bs58 = require("bs58");
 const crypto = require("crypto");
-
-export const createDidAuthResponsePayload = async (
-  input,
-  jwk
-): Promise<{ ResponsePayload: object }> => {
-  const responsePayload = {
-    iss: "https://self-issued.me",
-    sub: await getThumbprint(input.hexPrivatekey),
-    aud: input.redirectUri,
-    nonce: input.nonce,
-    sub_jwk: jwk,
-    claims: input.claims,
-  };
-  console.log(jwk.kid);
-  return { ResponsePayload: responsePayload };
-};
+const thumbprint_1 = require("jose/jwk/thumbprint");
 
 const getJWK = (hexPrivateKey, kid) => {
   const { x, y } = getECKeyfromHexPrivateKey(hexPrivateKey);
@@ -42,9 +27,9 @@ const getJWK = (hexPrivateKey, kid) => {
   };
 };
 
-const getThumbprint = async (hexPrivateKey) => {
-  //const jwk = getJWK(hexPrivateKey, kid);
-  const thumbprint = ""; //await thumbprint_1.calculateThumbprint(jwk, "sha256");
+const getThumbprint = async (hexPrivateKey, kid) => {
+  const jwk = getJWK(hexPrivateKey, kid);
+  const thumbprint = await thumbprint_1.calculateThumbprint(jwk, "sha256");
   return thumbprint;
 };
 
@@ -178,32 +163,19 @@ export const prepareDidDocument = async (
     await constructDidDoc(didUser, publicKey, reqDidDoc)
   ).didDoc;
 
-  const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
-
-  const canonicalizedDidDocument = canonicalize(didDocument);
-
-  const canonicalizedDidDocumentBuffer = Buffer.from(canonicalizedDidDocument);
-  const canonicalizedDidDocumentHash = ethers.utils.sha256(
-    canonicalizedDidDocumentBuffer
-  );
-
-  const timestampDataBuffer = Buffer.from(JSON.stringify({ time: Date.now() }));
+  const timestampData = { data: crypto.randomBytes(32).toString("hex") };
   const didVersionMetadata = {
     meta: crypto.randomBytes(32).toString("hex"),
   };
+
+  const timestampDataBuffer = Buffer.from(JSON.stringify(timestampData));
   const didVersionMetadataBuffer = Buffer.from(
     JSON.stringify(didVersionMetadata)
   );
 
   return {
     didDocument,
-    didDocumentBuffer,
-    canonicalizedDidDocument,
-    canonicalizedDidDocumentBuffer,
-    canonicalizedDidDocumentHash,
-    controllerDid: didUser,
     timestampDataBuffer,
-    didVersionMetadata,
     didVersionMetadataBuffer,
   };
 };
@@ -246,8 +218,8 @@ const constructDidDoc = async (
 const defaultDidDoc = (didUser: string, publicKey: object) => {
   return {
     "@context": [
-        "https://www.w3.org/ns/did/v1",
-        "https://w3id.org/security/suites/secp256k1-2019/v1",
+      "https://www.w3.org/ns/did/v1",
+      "https://w3id.org/security/suites/secp256k1-2019/v1",
     ],
     id: didUser,
     verificationMethod: [
@@ -356,6 +328,7 @@ export const jsonrpcSendTransaction = async (
   param
 ) => {
   const body = jsonrpcBody(method, [param]);
+  console.log(JSON.stringify(param));
   const response = await axios.post(url, body, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -503,7 +476,7 @@ export async function createAuthenticationResponse(didAuthResponseCall) {
 async function createAuthenticationResponsePayload(input) {
   const responsePayload = {
     iss: "https://self-issued.me",
-    sub: await getThumbprint(input.hexPrivatekey),
+    sub: await getThumbprint(input.hexPrivatekey, null),
     aud: input.redirectUri,
     nonce: input.nonce,
     sub_jwk: getJWK(input.hexPrivatekey, `${input.did}#key-1`),
