@@ -11,10 +11,11 @@ registerDid.post("/", async (req: Request, res: Response) => {
     const response = await didRegistry(
       req.body.secret.token,
       req.body.secret.id_token,
-      req.body.didDocument
+      req.body.didDocument,
+      req.body.secret.privateKey
     );
     try {
-      console.log(response);
+      console.log(JSON.stringify(response));
       res.send(response);
     } catch (e) {
       res.sendStatus(500);

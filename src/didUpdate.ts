@@ -1,8 +1,7 @@
-import { prepareUpdateDidDocument, jsonrpcSendTransaction } from "./util";
+import { prepareUpdateDidDocument, sendApiTransaction } from "./util";
 import { userOnBoardAuthReq } from "./userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
-const uuid_1 = require("uuid");
 
 export const didUpdate = async (
   token: string,
@@ -37,14 +36,17 @@ export const didUpdate = async (
   let method = "updateDidDocument";
   let buildParam;
   if (options.method == "insertDidController") {
+    console.log("Insert DID Controller");
     method = options.method;
     buildParam = await buildDidControllerParams(
       client.did,
       options.controllerDID
     );
   } else if (options.method == "updateDidController") {
+    console.log("Update DID Controller");
     method = options.method;
   } else {
+    console.log("Update DID Document");
     buildParam = await buildParams(newClient, client, didDocument, flag);
   }
   let param = {
@@ -52,12 +54,11 @@ export const didUpdate = async (
     ...buildParam.param,
   };
 
-  const res = await sendApiTransaction(method, idToken, param, client, () => {
+  await sendApiTransaction(method, idToken, param, client, () => {
     console.log(buildParam.info.title);
     console.log(buildParam.info.data);
   });
   console.log("did doc updated");
-  //client = newClient;
   console.log("here....");
   return {
     didState: {
@@ -69,34 +70,10 @@ export const didUpdate = async (
   };
 };
 
-const sendApiTransaction = async (
-  method: any,
-  token: string,
-  param: any,
-  client: any,
-  callback: any
-) => {
-  const url = `https://api.preprod.ebsi.eu/did-registry/v2/jsonrpc`;
-  callback();
-  const response = await jsonrpcSendTransaction(
-    client,
-    token,
-    url,
-    method,
-    param
-  );
-
-  if (response.status < 400 && (await waitToBeMined(response.data.result))) {
-    callback();
-  }
-
-  return response.data;
-};
-
 const buildParams = async (
   newClient: any,
   client: any,
-  didDocument: object,
+  didDoc: object,
   flag
 ) => {
   const controllerDid = client.did;
@@ -105,33 +82,28 @@ const buildParams = async (
     "publicKeyJwk",
     newClient.privateKey,
     flag,
-    didDocument
+    didDoc
   );
   const {
-    didDocumentBuffer,
-    canonicalizedDidDocumentHash,
+    didDocument,
     timestampDataBuffer,
     didVersionMetadataBuffer,
   } = newDidDocument;
-  console.log(newDidDocument);
 
-  const identifier = `0x${Buffer.from(controllerDid).toString("hex")}`;
-  const didVersionInfo = `0x${didDocumentBuffer.toString("hex")}`;
-  const timestampData = `0x${timestampDataBuffer.toString("hex")}`;
-  const didVersionMetadata = `0x${didVersionMetadataBuffer.toString("hex")}`;
+  const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
 
   return {
     info: {
       title: "Did document",
-      data: newDidDocument.didDocument,
+      data: didDocument,
     },
     param: {
-      identifier,
+      identifier: `0x${Buffer.from(controllerDid).toString("hex")}`,
       hashAlgorithmId: 1,
-      hashValue: canonicalizedDidDocumentHash,
-      didVersionInfo,
-      timestampData,
-      didVersionMetadata,
+      hashValue: ethers.utils.sha256(didDocumentBuffer),
+      didVersionInfo: `0x${didDocumentBuffer.toString("hex")}`,
+      timestampData: `0x${timestampDataBuffer.toString("hex")}`,
+      didVersionMetadata: `0x${didVersionMetadataBuffer.toString("hex")}`,
     },
   };
 };
@@ -143,34 +115,10 @@ const buildDidControllerParams = async (did: any, newController: any) => {
       identifier: `0x${Buffer.from(did).toString("hex")}`,
       newControllerId: newController,
       notBefore: Math.round(Date.now() / 1000),
-      notAfter: Math.round(Date.now() / 1000),
+      notAfter: 0,
     },
   };
 };
-
-async function waitToBeMined(txId) {
-  let mined = false;
-  let receipt = null;
-
-  // if (!oauth2token) {
-  //   utils.yellow(
-  //     "Wait some seconds while the transaction is mined and check if it was accepted"
-  //   );
-  //   return 0;
-  // }
-
-  //utils.yellow("Waiting to be mined...");
-  /* eslint-disable no-await-in-loop */
-  // while (!mined) {
-  //   await new Promise((resolve) => setTimeout(resolve, 5000));
-  //   receipt = await getLedgerTx(txId);
-  //   mined = !!receipt;
-  // }
-  // /* eslint-enable no-await-in-loop */
-  // if(!receipt) return 0;
-  // if('statreturn Number(receipt.status?) === 1;us' in receipt)
-  return 0;
-}
 
 // async function getLedgerTx(txId) {
 //   const url = `https://api.preprod.ebsi.eu/ledger/v2/blockchains/besu`;

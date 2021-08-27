@@ -1,5 +1,16 @@
 import { ES256KSigner, createJWT } from "@cef-ebsi/did-jwt";
 import axios from "axios";
+import {
+  CONTEXT_W3C_DID,
+  CONTEXT_W3C_SEC,
+  CONTEXT_W3C_VC,
+  OIDC_ISSUE,
+  VERIFIABLE_PRESENTATION,
+  ECDSA_SECP_256_K1_SIGNATURE_2019,
+  ECDSA_SECP_256_K1_VERIFICATION_KEY_2019,
+  ES256K,
+  ASSERTION_METHOD,
+} from "./types";
 
 const { EbsiWallet } = require("@cef-ebsi/wallet-lib");
 const { ethers } = require("ethers");
@@ -11,7 +22,6 @@ const buffer_1 = require("buffer");
 const {
   createVerifiablePresentation,
 } = require("@cef-ebsi/verifiable-presentation");
-const canonicalize = require("canonicalize");
 const bs58 = require("bs58");
 const crypto = require("crypto");
 const thumbprint_1 = require("jose/jwk/thumbprint");
@@ -40,13 +50,13 @@ export const signDidAuthInternal = async (did, payload, hexPrivateKey) => {
   let response = await createJWT(
     { ...payload },
     {
-      issuer: "https://self-issued.me",
-      alg: "ES256K",
+      issuer: OIDC_ISSUE,
+      alg: ES256K,
       signer: ES256KSigner(hexPrivateKey.replace("0x", "")),
       expiresIn: 5 * 60,
     },
     {
-      alg: "ES256K",
+      alg: ES256K,
       typ: "JWT",
       kid: request ? did : `${did}#key-1`,
     }
@@ -76,13 +86,13 @@ export const createVP = async (did, privateKey, vc) => {
     tirUrl: `https://api.preprod.ebsi.eu/trusted-issuers-registry/v2/issuers`,
   };
   const requiredProof = {
-    type: "EcdsaSecp256k1Signature2019",
-    proofPurpose: "assertionMethod",
+    type: ECDSA_SECP_256_K1_SIGNATURE_2019,
+    proofPurpose: ASSERTION_METHOD,
     verificationMethod: `${did}#keys-1`,
   };
   const presentation = {
-    "@context": ["https://www.w3.org/2018/credentials/v1"],
-    type: "VerifiablePresentation",
+    "@context": [CONTEXT_W3C_VC],
+    type: VERIFIABLE_PRESENTATION,
     verifiableCredential: [vc],
     holder: did,
   };
@@ -91,13 +101,13 @@ export const createVP = async (did, privateKey, vc) => {
   const jwtdata = await createJWT(
     presentation,
     {
-      alg: "ES256K",
+      alg: ES256K,
       issuer: did,
       signer: vpSigner,
-      // canonicalize: true,
+      canonicalize: true,
     },
     {
-      alg: "ES256K",
+      alg: ES256K,
       typ: "JWT",
       kid: `${options.resolver}/${did}#keys-1`,
     }
@@ -159,10 +169,18 @@ export const prepareDidDocument = async (
     default:
       throw new Error(`invalid type ${publicKeyType}`);
   }
-  const didDocument = await (
-    await constructDidDoc(didUser, publicKey, reqDidDoc)
-  ).didDoc;
+  const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc))
+    .didDoc;
+  return await prepareDIDRegistryObject(didDocument);
+};
 
+const prepareDIDRegistryObject = async (
+  didDocument: any
+): Promise<{
+  didDocument: any;
+  timestampDataBuffer: any;
+  didVersionMetadataBuffer: any;
+}> => {
   const timestampData = { data: crypto.randomBytes(32).toString("hex") };
   const didVersionMetadata = {
     meta: crypto.randomBytes(32).toString("hex"),
@@ -180,6 +198,29 @@ export const prepareDidDocument = async (
   };
 };
 
+export const sendApiTransaction = async (
+  method: any,
+  token: string,
+  param: any,
+  client: any,
+  callback: any
+) => {
+  const url = `https://api.preprod.ebsi.eu/did-registry/v2/jsonrpc`;
+  callback();
+  const response = await jsonrpcSendTransaction(
+    client,
+    token,
+    url,
+    method,
+    param
+  );
+
+  if (response.status < 400 && (await waitToBeMined(response.data.result))) {
+    callback();
+  }
+  return response.data;
+};
+
 const constructDidDoc = async (
   didUser: string,
   publicKey: object,
@@ -191,25 +232,12 @@ const constructDidDoc = async (
     //\\ TODO: construct the did doc and insert the key properly
     let doc: object = didDocument;
     if (!("@context" in didDocument) || doc["@context"].length == 0)
-      doc["@context"] = [
-        "https://www.w3.org/ns/did/v1",
-        "https://w3id.org/security/suites/secp256k1-2019/v1",
-      ];
+      doc["@context"] = [CONTEXT_W3C_DID, CONTEXT_W3C_SEC];
     doc["id"] = didUser;
-    doc["verificationMethod"] = [
-      {
-        id: `${didUser}#keys-1`,
-        type: "EcdsaSecp256k1VerificationKey2019",
-        controller: didUser,
-        ...publicKey,
-      },
-    ];
+    doc["verificationMethod"] = [verificationMethod(didUser, publicKey)];
     if (!("authentication" in didDocument) || doc["authentication"].length == 0)
       doc["authentication"] = [`${didUser}#keys-1`];
-    if (
-      !("assertionMethod" in didDocument) ||
-      doc["assertionMethod"].length == 0
-    )
+    if (!(ASSERTION_METHOD in didDocument) || doc[ASSERTION_METHOD].length == 0)
       doc["assertionMethod"] = [`${didUser}#keys-1`];
     return { didDoc: doc };
   }
@@ -217,19 +245,9 @@ const constructDidDoc = async (
 
 const defaultDidDoc = (didUser: string, publicKey: object) => {
   return {
-    "@context": [
-      "https://www.w3.org/ns/did/v1",
-      "https://w3id.org/security/suites/secp256k1-2019/v1",
-    ],
+    "@context": [CONTEXT_W3C_DID, CONTEXT_W3C_SEC],
     id: didUser,
-    verificationMethod: [
-      {
-        id: `${didUser}#keys-1`,
-        type: "EcdsaSecp256k1VerificationKey2019",
-        controller: didUser,
-        ...publicKey,
-      },
-    ],
+    verificationMethod: [verificationMethod(didUser, publicKey)],
     authentication: [`${didUser}#keys-1`],
     assertionMethod: [`${didUser}#keys-1`],
   };
@@ -276,42 +294,10 @@ export const prepareUpdateDidDocument = async (
       default:
         throw new Error(`invalid type ${publicKeyType}`);
     }
-    didDocument["verificationMethod"] = {
-      id: `${didUser}#keys-1`,
-      type: "Secp256k1VerificationKey2018",
-      controller: didUser,
-      ...publicKey,
-    };
+    didDocument["verificationMethod"] = verificationMethod(didUser, publicKey);
   }
 
-  const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
-
-  const canonicalizedDidDocument = canonicalize(didDocument);
-
-  const canonicalizedDidDocumentBuffer = Buffer.from(canonicalizedDidDocument);
-  const canonicalizedDidDocumentHash = ethers.utils.sha256(
-    canonicalizedDidDocumentBuffer
-  );
-
-  const timestampDataBuffer = Buffer.from(JSON.stringify({ time: Date.now() }));
-  const didVersionMetadata = {
-    meta: crypto.randomBytes(32).toString("hex"),
-  };
-  const didVersionMetadataBuffer = Buffer.from(
-    JSON.stringify(didVersionMetadata)
-  );
-
-  return {
-    didDocument,
-    didDocumentBuffer,
-    canonicalizedDidDocument,
-    canonicalizedDidDocumentBuffer,
-    canonicalizedDidDocumentHash,
-    controllerDid: didUser,
-    timestampDataBuffer,
-    didVersionMetadata,
-    didVersionMetadataBuffer,
-  };
+  return await prepareDIDRegistryObject(didDocument);
 };
 
 function fromHexString(hexString) {
@@ -319,6 +305,15 @@ function fromHexString(hexString) {
   if (!match) throw new Error("String could not be parsed");
   return new Uint8Array(match.map((byte) => parseInt(byte, 16)));
 }
+
+const verificationMethod = (didUser: string, publicKey: object) => {
+  return {
+    id: `${didUser}#keys-1`,
+    type: ECDSA_SECP_256_K1_VERIFICATION_KEY_2019,
+    controller: didUser,
+    ...publicKey,
+  };
+};
 
 export const jsonrpcSendTransaction = async (
   client,
@@ -483,4 +478,28 @@ async function createAuthenticationResponsePayload(input) {
     claims: input.claims,
   };
   return responsePayload;
+}
+
+async function waitToBeMined(txId) {
+  let mined = false;
+  let receipt = null;
+
+  // if (!oauth2token) {
+  //   utils.yellow(
+  //     "Wait some seconds while the transaction is mined and check if it was accepted"
+  //   );
+  //   return 0;
+  // }
+
+  //utils.yellow("Waiting to be mined...");
+  /* eslint-disable no-await-in-loop */
+  // while (!mined) {
+  //   await new Promise((resolve) => setTimeout(resolve, 5000));
+  //   receipt = await getLedgerTx(txId);
+  //   mined = !!receipt;
+  // }
+  // /* eslint-enable no-await-in-loop */
+  // if(!receipt) return 0;
+  // if('statreturn Number(receipt.status?) === 1;us' in receipt)
+  return 0;
 }

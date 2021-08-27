@@ -1,22 +1,23 @@
-import {
-  prepareDidDocument,
-  jsonrpcSendTransaction,
-  remove0xPrefix,
-} from "./util";
+import { prepareDidDocument, sendApiTransaction, remove0xPrefix } from "./util";
 
 import { userOnBoardAuthReq } from "./userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
-const uuid_1 = require("uuid");
 
 export const didRegistry = async (
   token: string,
   id_token: string,
-  didDocument: object
+  didDocument: object,
+  secretKey?: object
 ): Promise<{ didState: didRegResponse }> => {
   const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
-  const privateKey = "0x" + keyPairs.privateKey;
   let client;
+
+  let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
+
+  if (buffer == null) throw new Error("Unsupported key format");
+  const privateKey =
+    buffer != null ? buffer.toString("hex") : "0x" + keyPairs.privateKey;
 
   client = new ethers.Wallet(privateKey);
   const did = await EbsiWallet.createDid();
@@ -57,29 +58,6 @@ export const didRegistry = async (
   };
 };
 
-const sendApiTransaction = async (
-  method: any,
-  token: string,
-  param: any,
-  client: any,
-  callback: any
-) => {
-  const url = `https://api.preprod.ebsi.eu/did-registry/v2/jsonrpc`;
-  callback();
-  const response = await jsonrpcSendTransaction(
-    client,
-    token,
-    url,
-    method,
-    param
-  );
-
-  if (response.status < 400 && (await waitToBeMined(response.data.result))) {
-    callback();
-  }
-  return response.data;
-};
-
 const buildParams = async (client: any, didDoc: object) => {
   const controllerDid = client.did;
   const newDidDocument = await prepareDidDocument(
@@ -113,31 +91,6 @@ const buildParams = async (client: any, didDoc: object) => {
     },
   };
 };
-
-async function waitToBeMined(txId) {
-  let mined = false;
-  let receipt = null;
-  console.log(txId);
-
-  // if (!oauth2token) {
-  //   utils.yellow(
-  //     "Wait some seconds while the transaction is mined and check if it was accepted"
-  //   );
-  //   return 0;
-  // }
-
-  //utils.yellow("Waiting to be mined...");
-  /* eslint-disable no-await-in-loop */
-  // while (!mined) {
-  //   await new Promise((resolve) => setTimeout(resolve, 5000));
-  //   receipt = await getLedgerTx(txId);
-  //   mined = !!receipt;
-  // }
-  // /* eslint-enable no-await-in-loop */
-  // if(!receipt) return 0;
-  // if('statreturn Number(receipt.status?) === 1;us' in receipt)
-  return 0;
-}
 
 interface didRegResponse {
   state;
