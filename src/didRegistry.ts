@@ -14,11 +14,12 @@ export const didRegistry = async (
   let client;
 
   let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
-
-  if (buffer == null) throw new Error("Unsupported key format");
+  console.log("Started");
+  if (secretKey != null && buffer == null)
+    throw new Error("Unsupported key format");
   const privateKey =
     buffer != null ? buffer.toString("hex") : "0x" + keyPairs.privateKey;
-
+  console.log("Started");
   client = new ethers.Wallet(privateKey);
   const did = await EbsiWallet.createDid();
   client.did = did;
