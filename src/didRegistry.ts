@@ -1,4 +1,8 @@
-import { prepareDidDocument, sendApiTransaction, remove0xPrefix } from "./util";
+import {
+  prepareDidDocument,
+  sendApiTransaction,
+  remove0xPrefix,
+} from "./utils/utils";
 
 import { userOnBoardAuthReq } from "./userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
@@ -14,12 +18,10 @@ export const didRegistry = async (
   let client;
 
   let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
-  console.log("Started");
   if (secretKey != null && buffer == null)
     throw new Error("Unsupported key format");
   const privateKey =
     buffer != null ? buffer.toString("hex") : "0x" + keyPairs.privateKey;
-  console.log("Started");
   client = new ethers.Wallet(privateKey);
   const did = await EbsiWallet.createDid();
   client.did = did;

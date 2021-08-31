@@ -1,4 +1,4 @@
-import { prepareUpdateDidDocument, sendApiTransaction } from "./util";
+import { prepareUpdateDidDocument, sendApiTransaction } from "./utils/utils";
 import { userOnBoardAuthReq } from "./userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
@@ -45,7 +45,8 @@ export const didUpdate = async (
   } else if (options.method == "updateDidController") {
     console.log("Update DID Controller");
     method = options.method;
-  } else {
+    throw "Method not implemented";
+  } else if (options.method == "updateDidDocument") {
     console.log("Update DID Document");
     buildParam = await buildParams(newClient, client, didDocument, flag);
   }

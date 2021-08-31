@@ -10,12 +10,10 @@ import {
   ECDSA_SECP_256_K1_VERIFICATION_KEY_2019,
   ES256K,
   ASSERTION_METHOD,
-} from "./types";
+} from "../types";
 
 const { EbsiWallet } = require("@cef-ebsi/wallet-lib");
 const { ethers } = require("ethers");
-const elliptic_1 = require("elliptic");
-const js_base64_1 = require("js-base64");
 const base64url = require("base64url");
 const buffer_1 = require("buffer");
 
@@ -24,24 +22,6 @@ const {
 } = require("@cef-ebsi/verifiable-presentation");
 const bs58 = require("bs58");
 const crypto = require("crypto");
-const thumbprint_1 = require("jose/jwk/thumbprint");
-
-const getJWK = (hexPrivateKey, kid) => {
-  const { x, y } = getECKeyfromHexPrivateKey(hexPrivateKey);
-  return {
-    kid,
-    kty: "EC",
-    crv: "secp256k1",
-    x,
-    y,
-  };
-};
-
-const getThumbprint = async (hexPrivateKey, kid) => {
-  const jwk = getJWK(hexPrivateKey, kid);
-  const thumbprint = await thumbprint_1.calculateThumbprint(jwk, "sha256");
-  return thumbprint;
-};
 
 export const signDidAuthInternal = async (did, payload, hexPrivateKey) => {
   // check hexPrivateKey is valid
@@ -62,22 +42,6 @@ export const signDidAuthInternal = async (did, payload, hexPrivateKey) => {
     }
   );
   return response;
-};
-
-const getECKeyfromHexPrivateKey = (hexPrivateKey) => {
-  const ec = new elliptic_1.ec("secp256k1");
-  const privKey = ec.keyFromPrivate(hexPrivateKey.replace("0x", ""), "hex");
-  const pubPoint = privKey.getPublic();
-  return {
-    x: js_base64_1.Base64.fromUint8Array(
-      pubPoint.getX().toArrayLike(Buffer),
-      true
-    ),
-    y: js_base64_1.Base64.fromUint8Array(
-      pubPoint.getY().toArrayLike(Buffer),
-      true
-    ),
-  };
 };
 
 export const createVP = async (did, privateKey, vc) => {
@@ -392,8 +356,13 @@ export const resolveDid = async (
   return response.data.didDoc;
 };
 
-export const remove0xPrefix = (str) =>
-  str.startsWith("0x") ? str.slice(2) : str;
+export const remove0xPrefix = (str: string): string => {
+  return str.startsWith("0x") ? str.slice(2) : str;
+};
+
+export function prefixWith0x(key: string): string {
+  return key.startsWith("0x") ? key : `0x${key}`;
+}
 
 export const base64ToBase64Url = (privateKey) => {
   const privateKeyBuffer = privateKey.toArrayLike(buffer_1.Buffer);
@@ -424,60 +393,6 @@ export async function getLedgerTx(txId, token) {
       );
   }
   return receipt;
-}
-
-export async function createAuthenticationResponse(didAuthResponseCall) {
-  if (
-    !didAuthResponseCall ||
-    !didAuthResponseCall.hexPrivatekey ||
-    !didAuthResponseCall.did ||
-    !didAuthResponseCall.redirectUri
-  )
-    throw new Error("Invalid parmas");
-  const payload = await createAuthenticationResponsePayload(
-    didAuthResponseCall
-  );
-  // signs payload using internal libraries
-  const jwt = await signDidAuthInternal(
-    didAuthResponseCall.did,
-    payload,
-    didAuthResponseCall.hexPrivatekey
-  );
-  const params = `id_token=${jwt}`;
-  let uriResponse = {
-    urlEncoded: "",
-    bodyEncoded: "",
-    encoding: "application/x-www-form-urlencoded",
-    response_mode: didAuthResponseCall.response_mode
-      ? didAuthResponseCall.response_mode
-      : "fragment", // FRAGMENT is the default
-  };
-  if (didAuthResponseCall.response_mode === "form_post") {
-    uriResponse.urlEncoded = encodeURI(didAuthResponseCall.redirectUri);
-    uriResponse.bodyEncoded = encodeURI(params);
-    return uriResponse;
-  }
-  if (didAuthResponseCall.response_mode === "query") {
-    uriResponse.urlEncoded = encodeURI(
-      `${didAuthResponseCall.redirectUri}?${params}`
-    );
-    return uriResponse;
-  }
-  uriResponse.response_mode = "fragment";
-  uriResponse.urlEncoded = encodeURI(`${jwt}`);
-  return uriResponse;
-}
-
-async function createAuthenticationResponsePayload(input) {
-  const responsePayload = {
-    iss: "https://self-issued.me",
-    sub: await getThumbprint(input.hexPrivatekey, null),
-    aud: input.redirectUri,
-    nonce: input.nonce,
-    sub_jwk: getJWK(input.hexPrivatekey, `${input.did}#key-1`),
-    claims: input.claims,
-  };
-  return responsePayload;
 }
 
 async function waitToBeMined(txId) {
