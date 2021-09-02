@@ -1,5 +1,6 @@
 import express from "express";
 import { registerDid, didUpdateDoc } from "./router/didOperations.router";
+import { onboarding, genKey, signing } from "./router/helperApi.router";
 import cors = require("cors");
 
 const app = express();
@@ -8,6 +9,9 @@ app.use(cors());
 app.use(express.json());
 app.use("/1.0/create", registerDid);
 app.use("/1.0/update", didUpdateDoc);
+app.use("/1.0/onboard", onboarding);
+app.use("/1.0/generate", genKey);
+app.use("/1.0/signer", signing);
 
 app.get("/", (req, res) => res.send("Express + TypeScript Server"));
 app.listen(PORT, () => {

@@ -1,23 +1,53 @@
-import axios from "axios";
-import { createVP } from "./utils/utils";
+import { createVP, prefixWith0x } from "./utils";
 import {
   createAuthenticationResponse,
   verifyAuthenticationRequest,
   siopSession,
-} from "./utils/onboardingUtils";
-
+} from "./onboardingUtils";
+import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import querystring from "querystring";
 import { Agent } from "@cef-ebsi/siop-auth";
 import base64url from "base64url";
 const canonicalize = require("canonicalize");
+import { EbsiWallet } from "@cef-ebsi/wallet-lib";
+import { ethers } from "ethers";
+
+export const signer = async (
+  uTx: any,
+  privateKey: any
+): Promise<{ signedTx: any }> => {
+  console.log(privateKey);
+  const pk = prefixWith0x(privateKey);
+  let client = new ethers.Wallet(pk);
+  const sgnTx = await client.signTransaction(uTx);
+  return { signedTx: sgnTx };
+};
+
+export const keyGen = async () => {
+  const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
+  const wallet = await new EbsiWallet(keyPairs.privateKey);
+  const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
+  console.log(publicKeyJwk);
+  return {
+    privateKey: keyPairs.privateKey,
+    publicKey: publicKeyJwk,
+    clientAddress: prefixWith0x(wallet.getEthereumAddress()),
+  };
+};
 
 export const userOnBoardAuthReq = async (
-  token: string,
-  client: any,
-  publicKeyJwk: any
+  token: string
 ): Promise<{ id_token: string }> => {
   let response;
+  const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
+  let client;
+  const privateKey = "0x" + keyPairs.privateKey;
+  client = new ethers.Wallet(privateKey);
+  const did = await EbsiWallet.createDid();
+  client.did = did;
+  const wallet = await new EbsiWallet(privateKey);
+  const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
 
   const nonce = await uuidv4();
   console.log("User onboarding initialted");
@@ -80,7 +110,6 @@ export const userOnBoardAuthReq = async (
     "https://api.preprod.ebsi.eu/did-registry/v2/identifiers"
   );
   console.log("here......");
-
   console.log(awa);
   const siopSessionResponse = await siopSession(
     client,
@@ -104,41 +133,11 @@ export const userOnBoardAuthReq = async (
   return { id_token: accessToken.toString() };
 };
 
-// const authenticationResponse = await createAuthenticationResponse({
-//   hexPrivatekey: client.privateKey,
-//   did: client.did,
-//   nonce,
-//   redirectUri: "/siop-sessions",
-//   response_mode: "form_post",
-//   claims: {
-//     verified_claims: canonicalizedVP,
-//     encryption_key: publicKeyJwk,
-//   },
-// });
-// // working....
-// const authResponseDecoded = querystring.decode(
-//   authenticationResponse.bodyEncoded
-// );
-
-// const idToken = authResponseDecoded.id_token;
-// console.log("id token :  " + idToken);
-
-// const siopAuthSession = await axios.post(
-//   "https://api.preprod.ebsi.eu/authorisation/v1/siop-sessions",
-//   { id_token: idToken }
-// );
-// const agent = new Agent({
-//   privateKey: client.privateKey.slice(2),
-//   didRegistry: `https://api.preprod.ebsi.eu/did-registry/v2/identifiers`,
-// });
-
-// const token2 = await agent.verifyAuthenticationResponse(
-//   siopAuthSession.data,
-//   nonce
-// );
-
-// console.log(siopAuthSession.data);
-
-// console.log(token2);
-
-// return { id_token: token2 };
+var __classPrivateFieldGet =
+  (this && __classPrivateFieldGet) ||
+  function (receiver, privateMap) {
+    if (!privateMap.has(receiver)) {
+      throw new TypeError("attempted to get private field on non-instance");
+    }
+    return privateMap.get(receiver);
+  };

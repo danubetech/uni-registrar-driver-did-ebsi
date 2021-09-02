@@ -138,7 +138,7 @@ export const prepareDidDocument = async (
   return await prepareDIDRegistryObject(didDocument);
 };
 
-const prepareDIDRegistryObject = async (
+export const prepareDIDRegistryObject = async (
   didDocument: any
 ): Promise<{
   didDocument: any;
@@ -185,7 +185,7 @@ export const sendApiTransaction = async (
   return response.data;
 };
 
-const constructDidDoc = async (
+export const constructDidDoc = async (
   didUser: string,
   publicKey: object,
   didDocument: object
@@ -297,7 +297,6 @@ export const jsonrpcSendTransaction = async (
   );
   console.log("unsigned tx");
   console.log(uTx);
-  uTx.chainId = Number(uTx.chainId);
 
   const sgnTx = await client.signTransaction(uTx);
   console.log("signed tx");

@@ -2,18 +2,31 @@ import express, { Request, Response } from "express";
 
 import { didRegistry } from "../didRegistry";
 import { didUpdate } from "../didUpdate";
+import { didRegistryClientSideSecret } from "../didRegClientSideSecret";
 export const registerDid = express.Router();
 
 registerDid.post("/", async (req: Request, res: Response) => {
   try {
+    let response;
     if (req.body.secret == null) throw "Invalid params";
     console.log(req.body);
-    const response = await didRegistry(
-      req.body.secret.token,
-      req.body.secret.id_token,
-      req.body.didDocument,
-      req.body.secret.privateKey
-    );
+    if (req.body.options.clientSideSecret) {
+      response = await didRegistryClientSideSecret(
+        req.body.options.clientAddress,
+        req.body.secret.token,
+        req.body.didDocument,
+        req.body.options.publicKey,
+        req.body.options.jobId,
+        req.body.options.signedTx
+      );
+    } else {
+      response = await didRegistry(
+        req.body.secret.token,
+        req.body.secret.id_token,
+        req.body.didDocument,
+        req.body.secret.privateKey
+      );
+    }
     try {
       console.log(JSON.stringify(response));
       res.send(response);
@@ -30,6 +43,7 @@ export const didUpdateDoc = express.Router();
 didUpdateDoc.post("/", async (req: Request, res: Response) => {
   console.log(req.body);
   if (req.body.secret == null) throw "Invalid params";
+
   try {
     const response = await didUpdate(
       req.body.secret.token,
