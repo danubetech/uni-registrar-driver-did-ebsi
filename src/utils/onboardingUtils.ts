@@ -7,7 +7,7 @@ import { calculateThumbprint } from "jose/jwk/thumbprint";
 import { ec } from "elliptic";
 import { Base64 } from "js-base64";
 
-export async function createAuthenticationResponse(didAuthResponseCall) {
+export const createAuthenticationResponse = async (didAuthResponseCall) => {
   if (
     !didAuthResponseCall ||
     !didAuthResponseCall.hexPrivatekey ||
@@ -52,9 +52,9 @@ export async function createAuthenticationResponse(didAuthResponseCall) {
     `${didAuthResponseCall.redirectUri}#${params}`
   );
   return uriResponse;
-}
+};
 
-async function createAuthenticationResponsePayload(input) {
+const createAuthenticationResponsePayload = async (input) => {
   const responsePayload = {
     iss: OIDC_ISSUE,
     sub: await getThumbprint(input.hexPrivatekey, null),
@@ -64,9 +64,9 @@ async function createAuthenticationResponsePayload(input) {
     claims: input.claims,
   };
   return responsePayload;
-}
+};
 
-export async function verifyAuthenticationRequest(didAuthJwt, didRegistry) {
+export const verifyAuthenticationRequest = async (didAuthJwt, didRegistry) => {
   // as audience is set in payload as a DID, it is required to be set as options
   const options = {
     audience: getAudience(didAuthJwt),
@@ -76,17 +76,17 @@ export async function verifyAuthenticationRequest(didAuthJwt, didRegistry) {
   if (!verifiedJWT || !verifiedJWT.payload)
     throw Error("Signature Verification Error");
   return verifiedJWT.payload;
-}
+};
 
-function getAudience(jwt) {
+const getAudience = (jwt) => {
   const { payload } = decodeJWT(jwt);
   if (!payload) throw new Error("Null Payload");
   if (!payload.aud) return undefined;
   if (Array.isArray(payload.aud)) throw new Error("Invalid Payload");
   return payload.aud;
-}
+};
 
-export async function siopSession(
+export const siopSession = async (
   client: any,
   publicKey: object,
   callbackUrl: string,
@@ -95,7 +95,7 @@ export async function siopSession(
   alg: string;
   nonce: string;
   response: any;
-}> {
+}> => {
   const nonce = uuidv4();
   let body: unknown;
   let alg: string;
@@ -124,7 +124,7 @@ export async function siopSession(
     nonce,
     response: responseSession.data,
   };
-}
+};
 
 const getJWK = (hexPrivateKey, kid) => {
   const { x, y } = getECKeyfromHexPrivateKey(hexPrivateKey);

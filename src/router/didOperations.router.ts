@@ -16,7 +16,7 @@ registerDid.post("/", async (req: Request, res: Response) => {
         req.body.secret.token,
         req.body.didDocument,
         req.body.options.publicKey,
-        req.body.options.jobId,
+        req.body.jobId,
         req.body.options.signedTx
       );
     } else {

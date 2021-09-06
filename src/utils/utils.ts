@@ -12,16 +12,13 @@ import {
   ASSERTION_METHOD,
 } from "../types";
 
-const { EbsiWallet } = require("@cef-ebsi/wallet-lib");
-const { ethers } = require("ethers");
-const base64url = require("base64url");
-const buffer_1 = require("buffer");
-
-const {
-  createVerifiablePresentation,
-} = require("@cef-ebsi/verifiable-presentation");
-const bs58 = require("bs58");
-const crypto = require("crypto");
+import { EbsiWallet } from "@cef-ebsi/wallet-lib";
+import { ethers } from "ethers";
+import base64url from "base64url";
+import buffer_1 from "buffer";
+import { createVerifiablePresentation } from "@cef-ebsi/verifiable-presentation";
+import bs58 from "bs58";
+import crypto from "crypto";
 
 export const signDidAuthInternal = async (did, payload, hexPrivateKey) => {
   // check hexPrivateKey is valid
@@ -102,40 +99,6 @@ export const serialize = async (object) => {
   if (object === null || typeof object !== "object" || object.toJSON != null) {
     return JSON.stringify(object);
   }
-};
-
-export const prepareDidDocument = async (
-  didUser,
-  publicKeyType,
-  privateKeyController,
-  reqDidDoc
-) => {
-  let publicKey;
-  const controller = new ethers.Wallet(privateKeyController);
-  switch (publicKeyType) {
-    case "publicKeyHex":
-      publicKey = { publicKeyHex: controller.publicKey.slice(2) };
-      break;
-    case "publicKeyJwk":
-      publicKey = {
-        publicKeyJwk: new EbsiWallet(controller.privateKey).getPublicKey({
-          format: "jwk",
-        }),
-      };
-      break;
-    case "publicKeyBase58":
-      publicKey = {
-        publicKeyBase58: bs58.encode(
-          fromHexString(controller.publicKey.slice(2))
-        ),
-      };
-      break;
-    default:
-      throw new Error(`invalid type ${publicKeyType}`);
-  }
-  const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc))
-    .didDoc;
-  return await prepareDIDRegistryObject(didDocument);
 };
 
 export const prepareDIDRegistryObject = async (
@@ -264,11 +227,11 @@ export const prepareUpdateDidDocument = async (
   return await prepareDIDRegistryObject(didDocument);
 };
 
-function fromHexString(hexString) {
+export const fromHexString = (hexString: string) => {
   const match = hexString.match(/.{1,2}/g);
   if (!match) throw new Error("String could not be parsed");
   return new Uint8Array(match.map((byte) => parseInt(byte, 16)));
-}
+};
 
 const verificationMethod = (didUser: string, publicKey: object) => {
   return {
@@ -310,16 +273,16 @@ export const jsonrpcSendTransaction = async (
   });
 };
 
-export function jsonrpcBody(method, params) {
+export const jsonrpcBody = (method, params) => {
   return {
     jsonrpc: "2.0",
     method,
     params,
     id: Math.ceil(Math.random() * 1000),
   };
-}
+};
 
-function formatEthersUnsignedTransaction(unsignedTransaction) {
+const formatEthersUnsignedTransaction = (unsignedTransaction) => {
   return {
     to: unsignedTransaction.to,
     data: unsignedTransaction.data,
@@ -329,9 +292,9 @@ function formatEthersUnsignedTransaction(unsignedTransaction) {
     gasLimit: unsignedTransaction.gasLimit,
     gasPrice: unsignedTransaction.gasPrice,
   };
-}
+};
 
-function paramSignedTransaction(tx, sgnTx) {
+const paramSignedTransaction = (tx, sgnTx) => {
   const { r, s, v } = ethers.utils.parseTransaction(sgnTx);
   return {
     protocol: "eth",
@@ -341,7 +304,7 @@ function paramSignedTransaction(tx, sgnTx) {
     v: `0x${Number(v).toString(16)}`,
     signedRawTransaction: sgnTx,
   };
-}
+};
 
 export const resolveDid = async (
   did: string
@@ -359,9 +322,9 @@ export const remove0xPrefix = (str: string): string => {
   return str.startsWith("0x") ? str.slice(2) : str;
 };
 
-export function prefixWith0x(key: string): string {
+export const prefixWith0x = (key: string): string => {
   return key.startsWith("0x") ? key : `0x${key}`;
-}
+};
 
 export const base64ToBase64Url = (privateKey) => {
   const privateKeyBuffer = privateKey.toArrayLike(buffer_1.Buffer);
@@ -372,7 +335,7 @@ export const base64ToBase64Url = (privateKey) => {
     .replace(/=/g, "");
 };
 
-export async function getLedgerTx(txId, token) {
+export const getLedgerTx = async (txId, token) => {
   const url = `https://api.preprod.ebsi.eu/ledger/v2/blockchains/besu`;
   const body = jsonrpcBody("eth_getTransactionReceipt", txId);
   const response = await axios.post(url, body, {
@@ -392,9 +355,9 @@ export async function getLedgerTx(txId, token) {
       );
   }
   return receipt;
-}
+};
 
-async function waitToBeMined(txId) {
+const waitToBeMined = async (txId) => {
   let mined = false;
   let receipt = null;
 
@@ -416,4 +379,4 @@ async function waitToBeMined(txId) {
   // if(!receipt) return 0;
   // if('statreturn Number(receipt.status?) === 1;us' in receipt)
   return 0;
-}
+};

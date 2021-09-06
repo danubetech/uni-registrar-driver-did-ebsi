@@ -1,8 +1,5 @@
-import {
-  jsonrpcBody,
-  prepareDIDRegistryObject,
-  constructDidDoc,
-} from "./utils/utils";
+import { jsonrpcBody } from "./utils/utils";
+import { didRegResponse, buildParams } from "./utils/didRegistryUtils";
 import axios from "axios";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
@@ -19,10 +16,10 @@ export const didRegistryClientSideSecret = async (
   clientAddress: string,
   id_token: string,
   didDocument: object,
-  publicKeyJwk?: object,
+  publicKeyJwk: object,
   jobID?: any,
   signedTransaction?: any
-): Promise<{ didState: didRegResponse }> => {
+): Promise<didRegResponse> => {
   did = await EbsiWallet.createDid();
 
   idToken = id_token;
@@ -31,7 +28,11 @@ export const didRegistryClientSideSecret = async (
 
   switch (currentState) {
     case "initial":
-      const buildParam = await buildParams(did, publicKeyJwk, didDocument);
+      const buildParam = await buildParams({
+        did: did,
+        publicKey: publicKeyJwk,
+        didDoc: didDocument,
+      });
       let param = {
         from: clientAddress,
         ...buildParam.param,
@@ -53,15 +54,13 @@ export const didRegistryClientSideSecret = async (
       console.log(jobId);
       map.set(jobId, objectStore);
       return {
+        jobId: jobId,
         didState: {
-          jobId: jobId,
           state: "action",
           unSignedTx: uTx,
         },
       };
     case "action":
-      console.log("here");
-      console.log(jobID);
       console.log(signedTransaction);
       if (jobID == null || signedTransaction == null)
         throw new Error("Invalid params");
@@ -77,6 +76,8 @@ export const didRegistryClientSideSecret = async (
         objectMap.unsignedTx
       );
       console.log(res.data);
+      // remove jobId after completion
+      map.delete(jobID);
       return {
         didState: {
           state: "finished",
@@ -123,7 +124,7 @@ const constructSignedTx = async (token, url, signedTx, unSignedTx) => {
   });
 };
 
-function formatEthersUnsignedTransaction(unsignedTransaction) {
+const formatEthersUnsignedTransaction = (unsignedTransaction) => {
   return {
     to: unsignedTransaction.to,
     data: unsignedTransaction.data,
@@ -133,9 +134,9 @@ function formatEthersUnsignedTransaction(unsignedTransaction) {
     gasLimit: unsignedTransaction.gasLimit,
     gasPrice: unsignedTransaction.gasPrice,
   };
-}
+};
 
-function paramSignedTransaction(tx, sgnTx) {
+const paramSignedTransaction = (tx, sgnTx) => {
   const { r, s, v } = ethers.utils.parseTransaction(sgnTx);
   return {
     protocol: "eth",
@@ -145,56 +146,4 @@ function paramSignedTransaction(tx, sgnTx) {
     v: `0x${Number(v).toString(16)}`,
     signedRawTransaction: sgnTx,
   };
-}
-
-const buildParams = async (did: string, publicKey: any, didDoc: object) => {
-  const controllerDid = did;
-  const newDidDocument = await prepareDidDocumentWIthPublicKey(
-    controllerDid,
-    publicKey,
-    didDoc
-  );
-
-  const {
-    didDocument,
-    timestampDataBuffer,
-    didVersionMetadataBuffer,
-  } = newDidDocument;
-  console.log(newDidDocument);
-
-  const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
-
-  return {
-    info: {
-      title: "Did document",
-      data: didDocument,
-    },
-    param: {
-      identifier: `0x${Buffer.from(controllerDid).toString("hex")}`,
-      hashAlgorithmId: 1,
-      hashValue: ethers.utils.sha256(didDocumentBuffer),
-      didVersionInfo: `0x${didDocumentBuffer.toString("hex")}`,
-      timestampData: `0x${timestampDataBuffer.toString("hex")}`,
-      didVersionMetadata: `0x${didVersionMetadataBuffer.toString("hex")}`,
-    },
-  };
 };
-
-export const prepareDidDocumentWIthPublicKey = async (
-  didUser,
-  publicKey,
-  reqDidDoc
-) => {
-  const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc))
-    .didDoc;
-  return await prepareDIDRegistryObject(didDocument);
-};
-
-interface didRegResponse {
-  jobId?: any;
-  state: string;
-  identifier?: string;
-  secret?: object;
-  didDocument?: object;
-  unSignedTx?: object;
-}
