@@ -1,13 +1,13 @@
 {
-  "name": "ebsi-api-test",
+  "name": "uni-registrar-driver-did-ebsi",
   "version": "1.0.0",
-  "description": "Test project to learn ebsi-did api",
+  "description": "DID EBSI registrar driver Universal Registrar",
   "main": "./src/app.ts",
   "scripts": {
     "dev": "nodemon ./src/app.ts",
     "test": "test",
     "build": "tsc -p  ./",
-    "start": "ts-node  ./build/src/app.js"
+    "start": "node  ./build/src/app.js"
   },
   "author": "Ahamed Azeem",
   "license": "ISC",

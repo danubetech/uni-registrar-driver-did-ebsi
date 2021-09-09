@@ -1,4 +1,4 @@
-import { jsonrpcBody } from "./utils/utils";
+import { jsonrpcBody, paramSignedTransaction } from "./utils/utils";
 import { didRegResponse, buildParams } from "./utils/didRegistryUtils";
 import axios from "axios";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
@@ -48,7 +48,7 @@ export const didRegistryClientSideSecret = async (
       const objectStore = {
         did: did,
         didDocument: didDoc,
-        unsignedTx: unSigned,
+        unSignedTx: unSigned,
         idToken: idToken,
       };
       console.log(jobId);
@@ -61,24 +61,27 @@ export const didRegistryClientSideSecret = async (
         },
       };
     case "action":
-      console.log(signedTransaction);
+      
       if (jobID == null || signedTransaction == null)
         throw new Error("Invalid params");
 
       const objectMap = map.get(jobID);
       if (objectMap == null) throw new Error("Invalid JobId");
-      console.log(objectMap);
       const token = id_token != null ? id_token : objectMap.idToken;
+      console.log(objectMap.did);
+      console.log(objectMap.didDocument);
       const res = await constructSignedTx(
         token,
         url,
         signedTransaction,
-        objectMap.unsignedTx
+        objectMap.unSignedTx
       );
+      console.log("Signed Tx response..............");
       console.log(res.data);
       // remove jobId after completion
       map.delete(jobID);
       return {
+        jobId:null,
         didState: {
           state: "finished",
           identifier: objectMap.did,
@@ -119,9 +122,17 @@ const constructSignedTx = async (token, url, signedTx, unSignedTx) => {
   ]);
   console.log(signedTx);
   console.log(unSignedTx);
-  return axios.post(url, bodySend, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  let response;
+  try {
+   response = await axios.post(url, bodySend, {
+     headers: { Authorization: `Bearer ${token}` },
+   }); 
+  } catch (error) {
+    console.log(error);
+    throw new Error("Failed to send signed TX....");
+  }
+  console.log(response.status);
+  return response;
 };
 
 const formatEthersUnsignedTransaction = (unsignedTransaction) => {
@@ -136,14 +147,3 @@ const formatEthersUnsignedTransaction = (unsignedTransaction) => {
   };
 };
 
-const paramSignedTransaction = (tx, sgnTx) => {
-  const { r, s, v } = ethers.utils.parseTransaction(sgnTx);
-  return {
-    protocol: "eth",
-    unsignedTransaction: tx,
-    r,
-    s,
-    v: `0x${Number(v).toString(16)}`,
-    signedRawTransaction: sgnTx,
-  };
-};

@@ -294,7 +294,7 @@ const formatEthersUnsignedTransaction = (unsignedTransaction) => {
   };
 };
 
-const paramSignedTransaction = (tx, sgnTx) => {
+export const paramSignedTransaction = (tx, sgnTx) => {
   const { r, s, v } = ethers.utils.parseTransaction(sgnTx);
   return {
     protocol: "eth",
