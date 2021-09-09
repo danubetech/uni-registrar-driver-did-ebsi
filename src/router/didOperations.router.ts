@@ -8,11 +8,12 @@ registerDid.post("/", async (req: Request, res: Response) => {
   try {
     if (req.body.secret == null) throw "Invalid params";
     console.log(req.body);
+    const pk = req.body.secret.privateKey ? req.body.secret.privateKey : null;
     const response = await didRegistry(
       req.body.secret.token,
       req.body.secret.id_token,
       req.body.didDocument,
-      req.body.secret.privateKey
+      pk
     );
     try {
       console.log(JSON.stringify(response));
