@@ -1,10 +1,10 @@
 import axios from "axios";
-import { createVP } from "./utils/utils";
+import { createVP } from "../utils";
 import {
   createAuthenticationResponse,
   verifyAuthenticationRequest,
   siopSession,
-} from "./utils/onboardingUtils";
+} from "./onboardingUtils";
 
 import { v4 as uuidv4 } from "uuid";
 import querystring from "querystring";
@@ -29,23 +29,18 @@ export const userOnBoardAuthReq = async (
   });
   const [url, data] = didAuthResponseJwt.urlEncoded.split("#");
   console.log(didAuthResponseJwt);
-  try {
-    await axios
-      .post(url, data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "content-type": "application/x-www-form-urlencoded",
-        },
-      })
-      .then((res) => {
-        response = res;
-      });
-  } catch (error) {
-    // Handle Error Here
-    console.log("User Onboarding error");
-    console.error(error);
-    throw error.message;
-  }
+  response = await axios
+    .post(url, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+    })
+    .catch((error) => {
+      console.log("User Onboarding error");
+      console.error(error.message);
+      throw new Error("Invalid on-boarding token");
+    });
   const verifiableCredntial = response.data.verifiableCredential;
 
   console.log(verifiableCredntial);
@@ -103,42 +98,3 @@ export const userOnBoardAuthReq = async (
   console.log(accessToken);
   return { id_token: accessToken.toString() };
 };
-
-// const authenticationResponse = await createAuthenticationResponse({
-//   hexPrivatekey: client.privateKey,
-//   did: client.did,
-//   nonce,
-//   redirectUri: "/siop-sessions",
-//   response_mode: "form_post",
-//   claims: {
-//     verified_claims: canonicalizedVP,
-//     encryption_key: publicKeyJwk,
-//   },
-// });
-// // working....
-// const authResponseDecoded = querystring.decode(
-//   authenticationResponse.bodyEncoded
-// );
-
-// const idToken = authResponseDecoded.id_token;
-// console.log("id token :  " + idToken);
-
-// const siopAuthSession = await axios.post(
-//   "https://api.preprod.ebsi.eu/authorisation/v1/siop-sessions",
-//   { id_token: idToken }
-// );
-// const agent = new Agent({
-//   privateKey: client.privateKey.slice(2),
-//   didRegistry: `https://api.preprod.ebsi.eu/did-registry/v2/identifiers`,
-// });
-
-// const token2 = await agent.verifyAuthenticationResponse(
-//   siopAuthSession.data,
-//   nonce
-// );
-
-// console.log(siopAuthSession.data);
-
-// console.log(token2);
-
-// return { id_token: token2 };

@@ -1,5 +1,5 @@
-import { prepareUpdateDidDocument, sendApiTransaction } from "./utils/utils";
-import { userOnBoardAuthReq } from "./userOnboarding";
+import { prepareUpdateDidDocument, sendApiTransaction } from "../utils/utils";
+import { userOnBoardAuthReq } from "../utils/userOnboarding/userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
 
@@ -13,9 +13,7 @@ export const didUpdate = async (
 ): Promise<{ didState: didRegResponse }> => {
   let client;
   let buffer;
-  buffer = privateKeyJWK["d"]
-    ? Buffer.from(privateKeyJWK["d"], "base64")
-    : null;
+  buffer = privateKeyJWK["d"] ? Buffer.from(privateKeyJWK["d"], "base64") : null;
   if (buffer == null) throw new Error("Unsupported key format");
   const privateKey = buffer.toString("hex");
   const flag = options.flag;
@@ -38,10 +36,7 @@ export const didUpdate = async (
   if (options.method == "insertDidController") {
     console.log("Insert DID Controller");
     method = options.method;
-    buildParam = await buildDidControllerParams(
-      client.did,
-      options.controllerDID
-    );
+    buildParam = await buildDidControllerParams(client.did, options.controllerDID);
   } else if (options.method == "updateDidController") {
     console.log("Update DID Controller");
     method = options.method;
@@ -71,12 +66,7 @@ export const didUpdate = async (
   };
 };
 
-const buildParams = async (
-  newClient: any,
-  client: any,
-  didDoc: object,
-  flag
-) => {
+const buildParams = async (newClient: any, client: any, didDoc: object, flag) => {
   const controllerDid = client.did;
   const newDidDocument = await prepareUpdateDidDocument(
     controllerDid,
@@ -85,11 +75,7 @@ const buildParams = async (
     flag,
     didDoc
   );
-  const {
-    didDocument,
-    timestampDataBuffer,
-    didVersionMetadataBuffer,
-  } = newDidDocument;
+  const { didDocument, timestampDataBuffer, didVersionMetadataBuffer } = newDidDocument;
 
   const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
 

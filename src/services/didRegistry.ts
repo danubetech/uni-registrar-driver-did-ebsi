@@ -1,27 +1,21 @@
-import {
-  prepareDidDocument,
-  sendApiTransaction,
-  remove0xPrefix,
-} from "./utils/utils";
+import { prepareDidDocument, sendApiTransaction, remove0xPrefix } from "../utils/utils";
 
-import { userOnBoardAuthReq } from "./userOnboarding";
+import { userOnBoardAuthReq } from "../utils/userOnboarding/userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
 
 export const didRegistry = async (
   token: string,
-  id_token: string,
   didDocument: object,
+  id_token?: string,
   secretKey?: object
 ): Promise<{ didState: didRegResponse }> => {
   const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
   let client;
-
   let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
-  if (secretKey != null && buffer == null)
-    throw new Error("Unsupported key format");
-  const privateKey =
-    buffer != null ? buffer.toString("hex") : "0x" + keyPairs.privateKey;
+  if (secretKey != null && buffer == null) throw new Error("Unsupported key format");
+  const privateKey = buffer != null ? buffer.toString("hex") : "0x" + keyPairs.privateKey;
+
   client = new ethers.Wallet(privateKey);
   const did = await EbsiWallet.createDid();
   client.did = did;
@@ -70,11 +64,7 @@ const buildParams = async (client: any, didDoc: object) => {
     didDoc
   );
 
-  const {
-    didDocument,
-    timestampDataBuffer,
-    didVersionMetadataBuffer,
-  } = newDidDocument;
+  const { didDocument, timestampDataBuffer, didVersionMetadataBuffer } = newDidDocument;
   console.log(newDidDocument);
 
   const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
@@ -96,17 +86,8 @@ const buildParams = async (client: any, didDoc: object) => {
 };
 
 interface didRegResponse {
-  state;
+  state: string;
   identifier: string;
   secret: object;
   didDocument: object;
 }
-
-var __classPrivateFieldGet =
-  (this && __classPrivateFieldGet) ||
-  function (receiver, privateMap) {
-    if (!privateMap.has(receiver)) {
-      throw new TypeError("attempted to get private field on non-instance");
-    }
-    return privateMap.get(receiver);
-  };

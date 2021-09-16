@@ -1,8 +1,8 @@
 import { decodeJWT, verifyEbsiJWT } from "@cef-ebsi/did-jwt";
 import axios from "axios";
-import { OIDC_ISSUE, ES256K } from "../types";
+import { OIDC_ISSUE, ES256K } from "../constants";
 import { v4 as uuidv4 } from "uuid";
-import { signDidAuthInternal, prefixWith0x } from "./utils";
+import { signDidAuthInternal, prefixWith0x } from "../utils";
 import { calculateThumbprint } from "jose/jwk/thumbprint";
 import { ec } from "elliptic";
 import { Base64 } from "js-base64";
@@ -16,23 +16,15 @@ export async function createAuthenticationResponse(didAuthResponseCall) {
   )
     throw new Error("Invalid parmas");
 
-  const payload = await createAuthenticationResponsePayload(
-    didAuthResponseCall
-  );
+  const payload = await createAuthenticationResponsePayload(didAuthResponseCall);
   // signs payload using internal libraries
-  const jwt = await signDidAuthInternal(
-    didAuthResponseCall.did,
-    payload,
-    didAuthResponseCall.hexPrivatekey
-  );
+  const jwt = await signDidAuthInternal(didAuthResponseCall.did, payload, didAuthResponseCall.hexPrivatekey);
   const params = `id_token=${jwt}`;
   let uriResponse = {
     urlEncoded: "",
     bodyEncoded: "",
     encoding: "application/x-www-form-urlencoded",
-    response_mode: didAuthResponseCall.response_mode
-      ? didAuthResponseCall.response_mode
-      : "fragment", // FRAGMENT is the default
+    response_mode: didAuthResponseCall.response_mode ? didAuthResponseCall.response_mode : "fragment", // FRAGMENT is the default
   };
 
   if (didAuthResponseCall.response_mode === "form_post") {
@@ -42,15 +34,11 @@ export async function createAuthenticationResponse(didAuthResponseCall) {
   }
 
   if (didAuthResponseCall.response_mode === "query") {
-    uriResponse.urlEncoded = encodeURI(
-      `${didAuthResponseCall.redirectUri}?${params}`
-    );
+    uriResponse.urlEncoded = encodeURI(`${didAuthResponseCall.redirectUri}?${params}`);
     return uriResponse;
   }
   uriResponse.response_mode = "fragment";
-  uriResponse.urlEncoded = encodeURI(
-    `${didAuthResponseCall.redirectUri}#${params}`
-  );
+  uriResponse.urlEncoded = encodeURI(`${didAuthResponseCall.redirectUri}#${params}`);
   return uriResponse;
 }
 
@@ -73,8 +61,7 @@ export async function verifyAuthenticationRequest(didAuthJwt, didRegistry) {
     didRegistry,
   };
   const verifiedJWT = await verifyEbsiJWT(didAuthJwt, options);
-  if (!verifiedJWT || !verifiedJWT.payload)
-    throw Error("Signature Verification Error");
+  if (!verifiedJWT || !verifiedJWT.payload) throw Error("Signature Verification Error");
   return verifiedJWT.payload;
 }
 
@@ -145,10 +132,7 @@ const getThumbprint = async (hexPrivateKey, kid) => {
 
 const getECKeyfromHexPrivateKey = (hexPrivateKey) => {
   const secp256 = new ec("secp256k1");
-  const privKey = secp256.keyFromPrivate(
-    hexPrivateKey.replace("0x", ""),
-    "hex"
-  );
+  const privKey = secp256.keyFromPrivate(hexPrivateKey.replace("0x", ""), "hex");
   const pubPoint = privKey.getPublic();
   return {
     x: Base64.fromUint8Array(pubPoint.getX().toArrayLike(Buffer), true),
