@@ -39,11 +39,10 @@ export const buildParams = async (buildParamsObj: buildParamsObject) => {
 
 const prepareDidDocumentWithPublicKey = async (
   didUser: string,
-  publicKey: object,
+  publicKey: Array<object>,
   reqDidDoc: object
 ) => {
-  const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc))
-    .didDoc;
+  const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc)).didDoc;
   return await prepareDIDRegistryObject(didDocument);
 };
 
@@ -61,5 +60,5 @@ export interface didRegResponse {
 interface buildParamsObject {
   didDoc: object;
   did: string;
-  publicKey: object;
+  publicKey: Array<object>;
 }

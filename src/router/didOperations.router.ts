@@ -12,6 +12,7 @@ registerDid.post("/", async (req: Request, res: Response) => {
     console.log(req.body);
     if (req.body.options.clientSideSecret) {
       response = await didRegistryClientSideSecret(
+        req.body.options.identifier,
         req.body.options.clientAddress,
         req.body.secret.token,
         req.body.didDocument,

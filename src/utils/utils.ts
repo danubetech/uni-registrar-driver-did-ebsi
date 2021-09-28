@@ -150,7 +150,7 @@ export const sendApiTransaction = async (
 
 export const constructDidDoc = async (
   didUser: string,
-  publicKey: object,
+  publicKey: Array<object>,
   didDocument: object
 ): Promise<{ didDoc: object }> => {
   if (didDocument == null || Object.keys(didDocument).length < 3)
@@ -161,7 +161,7 @@ export const constructDidDoc = async (
     if (!("@context" in didDocument) || doc["@context"].length == 0)
       doc["@context"] = [CONTEXT_W3C_DID, CONTEXT_W3C_SEC];
     doc["id"] = didUser;
-    doc["verificationMethod"] = [verificationMethod(didUser, publicKey)];
+    doc["verificationMethod"] = verificationMethod(didUser, publicKey);
     if (!("authentication" in didDocument) || doc["authentication"].length == 0)
       doc["authentication"] = [`${didUser}#keys-1`];
     if (!(ASSERTION_METHOD in didDocument) || doc[ASSERTION_METHOD].length == 0)
@@ -170,11 +170,11 @@ export const constructDidDoc = async (
   }
 };
 
-const defaultDidDoc = (didUser: string, publicKey: object) => {
+const defaultDidDoc = (didUser: string, publicKey: Array<object>) => {
   return {
     "@context": [CONTEXT_W3C_DID, CONTEXT_W3C_SEC],
     id: didUser,
-    verificationMethod: [verificationMethod(didUser, publicKey)],
+    verificationMethod: verificationMethod(didUser, publicKey),
     authentication: [`${didUser}#keys-1`],
     assertionMethod: [`${didUser}#keys-1`],
   };
@@ -233,13 +233,18 @@ export const fromHexString = (hexString: string) => {
   return new Uint8Array(match.map((byte) => parseInt(byte, 16)));
 };
 
-const verificationMethod = (didUser: string, publicKey: object) => {
-  return {
-    id: `${didUser}#keys-1`,
-    type: ECDSA_SECP_256_K1_VERIFICATION_KEY_2019,
-    controller: didUser,
-    ...publicKey,
-  };
+const verificationMethod = (didUser: string, publicKey: Array<object>) => {
+  let verificationMethodObject: Array<object> = [];
+
+  for (let i = 0; i < publicKey.length; i++) {
+    verificationMethodObject.push({
+      id: `${didUser}#keys-${i+1}`,
+      controller: didUser,
+      ...publicKey[i],
+    });
+  }
+  console.log(verificationMethodObject);
+  return verificationMethodObject;
 };
 
 export const jsonrpcSendTransaction = async (

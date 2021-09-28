@@ -13,15 +13,14 @@ let idToken;
 let map = new Map();
 
 export const didRegistryClientSideSecret = async (
+  did: string,
   clientAddress: string,
   id_token: string,
   didDocument: object,
-  publicKeyJwk: object,
+  publicKeyObject: Array<object>,
   jobID?: any,
   signedTransaction?: any
 ): Promise<didRegResponse> => {
-  did = await EbsiWallet.createDid();
-
   idToken = id_token;
   let currentState = jobID == null ? "initial" : "action";
   const url = `https://api.preprod.ebsi.eu/did-registry/v2/jsonrpc`;
@@ -30,7 +29,7 @@ export const didRegistryClientSideSecret = async (
     case "initial":
       const buildParam = await buildParams({
         did: did,
-        publicKey: publicKeyJwk,
+        publicKey: publicKeyObject,
         didDoc: didDocument,
       });
       let param = {
@@ -38,12 +37,7 @@ export const didRegistryClientSideSecret = async (
         ...buildParam.param,
       };
       didDoc = buildParam.info.data;
-      const uTx = await constructUnsignedTx(
-        idToken,
-        url,
-        "insertDidDocument",
-        param
-      );
+      const uTx = await constructUnsignedTx(idToken, url, "insertDidDocument", param);
       const jobId = uuidv4();
       const objectStore = {
         did: did,
@@ -61,27 +55,20 @@ export const didRegistryClientSideSecret = async (
         },
       };
     case "action":
-      
-      if (jobID == null || signedTransaction == null)
-        throw new Error("Invalid params");
+      if (jobID == null || signedTransaction == null) throw new Error("Invalid params");
 
       const objectMap = map.get(jobID);
       if (objectMap == null) throw new Error("Invalid JobId");
       const token = id_token != null ? id_token : objectMap.idToken;
       console.log(objectMap.did);
       console.log(objectMap.didDocument);
-      const res = await constructSignedTx(
-        token,
-        url,
-        signedTransaction,
-        objectMap.unSignedTx
-      );
+      const res = await constructSignedTx(token, url, signedTransaction, objectMap.unSignedTx);
       console.log("Signed Tx response..............");
       console.log(res.data);
       // remove jobId after completion
       map.delete(jobID);
       return {
-        jobId:null,
+        jobId: null,
         didState: {
           state: "finished",
           identifier: objectMap.did,
