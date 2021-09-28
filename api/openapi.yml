@@ -269,10 +269,9 @@ components:
       example:
         state: state
     PrivateKeyJWK:
-      type: object
-      properties:
-        privateKey:
-          $ref: "#/components/schemas/PrivateKeyObject"
+      oneOf:
+        - type: object
+        - type: string
     PrivateKeyObject:
       type: object
       properties:

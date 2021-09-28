@@ -201,43 +201,24 @@ const defaultDidDoc = (didUser: string, publicKey: object) => {
 
 export const prepareUpdateDidDocument = async (
   didUser,
-  publicKeyType,
   privateKeyController,
-  flag: string,
   didDoc: any | null
 ) => {
   let didDocument;
 
   didDocument =
-    didDoc == null || Object.keys(didDoc).length < 3 ? await resolveDid(didUser) : didDocument;
-
-  if (flag == "updateKey") {
-    didDocument = await resolveDid(didUser);
-    console.log("resolved Did Doc");
-    console.log(didDocument);
-    let publicKey;
-    const controller = new ethers.Wallet(privateKeyController);
-    switch (publicKeyType) {
-      case "publicKeyHex":
-        publicKey = { publicKeyHex: controller.publicKey.slice(2) };
-        break;
-      case "publicKeyJwk":
-        publicKey = {
-          publicKeyJwk: new EbsiWallet(controller.privateKey).getPublicKey({
-            format: "jwk",
-          }),
-        };
-        break;
-      case "publicKeyBase58":
-        publicKey = {
-          publicKeyBase58: bs58.encode(fromHexString(controller.publicKey.slice(2))),
-        };
-        break;
-      default:
-        throw new Error(`invalid type ${publicKeyType}`);
-    }
-    didDocument["verificationMethod"] = verificationMethod(didUser, publicKey);
-  }
+    didDoc == null || Object.keys(didDoc).length < 3 ? await resolveDid(didUser) : didDoc;
+  console.log("resolved Did Doc");
+  console.log(didDocument);
+  console.log(didDoc);
+  //let publicKeyObjects: Array<object> = didDocument.get("verificationMethod"); 
+  //const controller = new ethers.Wallet(privateKeyController);
+  // let publicKey = {
+  //   publicKeyJwk: new EbsiWallet(controller.privateKey).getPublicKey({
+  //     format: "jwk",
+  //   }),
+  // };
+  //didDocument["verificationMethod"] = verificationMethod(didUser, publicKey);
 
   return await prepareDIDRegistryObject(didDocument);
 };
@@ -247,6 +228,7 @@ function fromHexString(hexString) {
   if (!match) throw new Error("String could not be parsed");
   return new Uint8Array(match.map((byte) => parseInt(byte, 16)));
 }
+
 
 const verificationMethod = (didUser: string, publicKey: object) => {
   return {

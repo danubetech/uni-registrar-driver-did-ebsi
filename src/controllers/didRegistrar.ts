@@ -29,7 +29,6 @@ export const update = async (req: Request, res: Response): Promise<void> => {
   if (req.body.secret == null) throw "Invalid params";
   await didUpdate(
     req.body.secret.token,
-    req.body.secret.id_token,
     req.body.identifier,
     req.body.secret.privateKey,
     req.body.didDocument,

@@ -5,30 +5,28 @@ import { ethers } from "ethers";
 
 export const didUpdate = async (
   token: string,
-  id_token: string,
   did: string,
-  privateKeyJWK: object,
+  privateKeyInput: object,
   didDocument: object,
   options: any
 ): Promise<{ didState: didRegResponse }> => {
   let client;
-  let buffer;
-  buffer = privateKeyJWK["d"] ? Buffer.from(privateKeyJWK["d"], "base64") : null;
-  if (buffer == null) throw new Error("Unsupported key format");
-  const privateKey = buffer.toString("hex");
-  const flag = options.flag;
+  let privateKey;
+
+  if (privateKeyInput["d"] != null) {
+    const buffer = Buffer.from(privateKeyInput["d"], "base64");
+    privateKey = buffer.toString("hex");
+  } else { 
+    privateKey = privateKeyInput;
+  }
 
   client = new ethers.Wallet("0x" + privateKey);
   client.did = did;
   const wallet = new EbsiWallet("0x" + privateKey);
   const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
 
-  const keyPairs = await EbsiWallet.generateKeyPair();
-  const newClient = await new ethers.Wallet("0x" + keyPairs.privateKey);
-  const idToken =
-    id_token != null
-      ? id_token
-      : await (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
+
+  const idToken = (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
 
   // Creates a URI using the wallet backend that manages entity DID keys
   let method = "updateDidDocument";
@@ -43,7 +41,9 @@ export const didUpdate = async (
     throw "Method not implemented";
   } else if (options.method == "updateDidDocument") {
     console.log("Update DID Document");
-    buildParam = await buildParams(newClient, client, didDocument, flag);
+    buildParam = await buildParams(client, didDocument);
+  } else { 
+    throw "Invalid DID update \"options.method\"";
   }
   let param = {
     from: client.address,
@@ -60,19 +60,16 @@ export const didUpdate = async (
     didState: {
       state: "finished",
       identifier: did,
-      secret: { updatedKeys: keyPairs },
       didDocument: buildParam.info.data,
     },
   };
 };
 
-const buildParams = async (newClient: any, client: any, didDoc: object, flag) => {
+const buildParams = async ( client: any, didDoc: object) => {
   const controllerDid = client.did;
   const newDidDocument = await prepareUpdateDidDocument(
     controllerDid,
-    "publicKeyJwk",
-    newClient.privateKey,
-    flag,
+    client.privateKey,
     didDoc
   );
   const { didDocument, timestampDataBuffer, didVersionMetadataBuffer } = newDidDocument;
@@ -132,6 +129,6 @@ const buildDidControllerParams = async (did: any, newController: any) => {
 interface didRegResponse {
   state;
   identifier: string;
-  secret: object;
   didDocument: object;
+  secret?: object;
 }
