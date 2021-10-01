@@ -105,7 +105,7 @@ export async function siopSession(
   console.log(didAuthJwt);
   body = didAuthJwt.bodyEncoded;
   const responseSession = await axios.post(callbackUrl, body);
-  console.log(responseSession);
+  console.log(responseSession.data);
   return {
     alg,
     nonce,

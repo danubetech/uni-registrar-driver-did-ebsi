@@ -270,8 +270,8 @@ components:
         state: state
     PrivateKeyJWK:
       oneOf:
-        - type: object
         - type: string
+        - type: object
     PrivateKeyObject:
       type: object
       properties:

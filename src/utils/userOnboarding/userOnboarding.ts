@@ -70,13 +70,11 @@ export const userOnBoardAuthReq = async (
     request: string;
   };
   console.log(uriDecoded);
-  const awa = await verifyAuthenticationRequest(
+  await verifyAuthenticationRequest(
     uriDecoded.request,
     "https://api.preprod.ebsi.eu/did-registry/v2/identifiers"
   );
-  console.log("here......");
 
-  console.log(awa);
   const siopSessionResponse = await siopSession(
     client,
     publicKeyJwk,
