@@ -78,6 +78,7 @@ components:
       properties:
         jobId:
           type: string
+          nullable: true
           example: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
         identifier:
           type: string
@@ -99,6 +100,7 @@ components:
       properties:
         jobId:
           type: string
+          nullable: true
           example: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
         identifier:
           type: string
