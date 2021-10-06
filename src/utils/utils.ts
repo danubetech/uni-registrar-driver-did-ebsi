@@ -7,7 +7,7 @@ import {
   OIDC_ISSUE,
   VERIFIABLE_PRESENTATION,
   ECDSA_SECP_256_K1_SIGNATURE_2019,
-  ECDSA_SECP_256_K1_VERIFICATION_KEY_2019,
+  JSON_WEB_Key_2020,
   ES256K,
   ASSERTION_METHOD,
 } from "./constants";
@@ -158,7 +158,6 @@ export const sendApiTransaction = async (
   callback: any
 ) => {
   const url = `https://api.preprod.ebsi.eu/did-registry/v2/jsonrpc`;
-  callback();
   const response = await jsonrpcSendTransaction(client, token, url, method, param);
 
   if (response.status < 400 && (await waitToBeMined(response.data.result))) {
@@ -208,9 +207,7 @@ export const prepareUpdateDidDocument = async (
 
   didDocument =
     didDoc == null || Object.keys(didDoc).length < 3 ? await resolveDid(didUser) : didDoc;
-  console.log("resolved Did Doc");
   console.log(didDocument);
-  console.log(didDoc);
   //let publicKeyObjects: Array<object> = didDocument.get("verificationMethod"); 
   //const controller = new ethers.Wallet(privateKeyController);
   // let publicKey = {
@@ -233,7 +230,7 @@ function fromHexString(hexString) {
 const verificationMethod = (didUser: string, publicKey: object) => {
   return {
     id: `${didUser}#keys-1`,
-    type: ECDSA_SECP_256_K1_VERIFICATION_KEY_2019,
+    type: JSON_WEB_Key_2020,
     controller: didUser,
     ...publicKey,
   };

@@ -7,5 +7,6 @@ export const VERIFIABLE_PRESENTATION = "VerifiablePresentation";
 export const ECDSA_SECP_256_K1_SIGNATURE_2019 = "EcdsaSecp256k1Signature2019";
 export const ECDSA_SECP_256_K1_VERIFICATION_KEY_2019 =
   "EcdsaSecp256k1VerificationKey2019";
+export const JSON_WEB_Key_2020 = "JsonWebKey2020";
 export const ES256K = "ES256K";
 export const ASSERTION_METHOD = "assertionMethod";
