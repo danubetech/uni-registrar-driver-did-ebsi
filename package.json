@@ -1,7 +1,7 @@
 {
-  "name": "ebsi-api-test",
-  "version": "1.0.0",
-  "description": "Test project to learn ebsi-did api",
+  "name": "uni-registrar-driver-did-ebsi",
+  "version": "0.2.0",
+  "description": "Universal registrar driver for did:ebsi method",
   "main": "./src/app.ts",
   "scripts": {
     "dev": "nodemon ./src/app.ts",
