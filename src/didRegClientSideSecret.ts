@@ -1,13 +1,10 @@
 import { jsonrpcBody, paramSignedTransaction } from "./utils/utils";
 import { didRegResponse, buildParams } from "./utils/didRegistryUtils";
 import axios from "axios";
-import { EbsiWallet } from "@cef-ebsi/wallet-lib";
-import { ethers } from "ethers";
 import { v4 as uuidv4 } from "uuid";
 
 let didDoc;
 let unSigned;
-let did;
 let idToken;
 
 let map = new Map();
@@ -51,7 +48,7 @@ export const didRegistryClientSideSecret = async (
         jobId: jobId,
         didState: {
           state: "action",
-          unSignedTx: uTx,
+          payload: uTx,
         },
       };
     case "action":

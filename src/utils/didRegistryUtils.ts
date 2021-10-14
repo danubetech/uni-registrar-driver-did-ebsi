@@ -53,7 +53,7 @@ export interface didRegResponse {
     identifier?: string;
     secret?: object;
     didDocument?: object;
-    unSignedTx?: object;
+    payload?: object;
   };
 }
 
