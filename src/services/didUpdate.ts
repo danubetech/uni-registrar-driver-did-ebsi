@@ -2,6 +2,7 @@ import { prepareUpdateDidDocument, sendApiTransaction } from "../utils/utils";
 import { userOnBoardAuthReq } from "../utils/userOnboarding/userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
+import { didRegistrationResponse } from "../utils/interfaces";
 
 export const didUpdate = async (
   token: string,
@@ -9,14 +10,14 @@ export const didUpdate = async (
   privateKeyInput: object,
   didDocument: object,
   options: any
-): Promise<{ didState: didRegResponse }> => {
+): Promise<{ didState: didRegistrationResponse }> => {
   let client;
   let privateKey;
 
   if (privateKeyInput["d"] != null) {
     const buffer = Buffer.from(privateKeyInput["d"], "base64");
     privateKey = buffer.toString("hex");
-  } else { 
+  } else {
     privateKey = privateKeyInput;
   }
 
@@ -24,7 +25,6 @@ export const didUpdate = async (
   client.did = did;
   const wallet = new EbsiWallet("0x" + privateKey);
   const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
-
 
   const idToken = (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
 
@@ -42,8 +42,8 @@ export const didUpdate = async (
   } else if (options.method == "updateDidDocument") {
     console.log("Update DID Document");
     buildParam = await buildParams(client, didDocument);
-  } else { 
-    throw "Invalid DID update \"options.method\"";
+  } else {
+    throw 'Invalid DID update "options.method"';
   }
   let param = {
     from: client.address,
@@ -64,6 +64,7 @@ export const didUpdate = async (
     },
   };
 };
+
 
 const buildParams = async ( client: any, didDoc: object) => {
   const controllerDid = client.did;
@@ -126,9 +127,3 @@ const buildDidControllerParams = async (did: any, newController: any) => {
 //   return receipt;
 // }
 
-interface didRegResponse {
-  state;
-  identifier: string;
-  didDocument: object;
-  secret?: object;
-}

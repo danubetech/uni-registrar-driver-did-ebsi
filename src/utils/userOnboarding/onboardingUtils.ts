@@ -42,7 +42,7 @@ export async function createAuthenticationResponse(didAuthResponseCall) {
   return uriResponse;
 }
 
-async function createAuthenticationResponsePayload(input) {
+const createAuthenticationResponsePayload = async (input:any) => {
   const responsePayload = {
     iss: OIDC_ISSUE,
     sub: await getThumbprint(input.hexPrivatekey, null),
@@ -52,9 +52,9 @@ async function createAuthenticationResponsePayload(input) {
     claims: input.claims,
   };
   return responsePayload;
-}
+};
 
-export async function verifyAuthenticationRequest(didAuthJwt, didRegistry) {
+export async function verifyAuthenticationRequest(didAuthJwt:string, didRegistry:string) {
   // as audience is set in payload as a DID, it is required to be set as options
   const options = {
     audience: getAudience(didAuthJwt),
@@ -65,13 +65,13 @@ export async function verifyAuthenticationRequest(didAuthJwt, didRegistry) {
   return verifiedJWT.payload;
 }
 
-function getAudience(jwt) {
+const getAudience = (jwt:string) => {
   const { payload } = decodeJWT(jwt);
   if (!payload) throw new Error("Null Payload");
   if (!payload.aud) return undefined;
   if (Array.isArray(payload.aud)) throw new Error("Invalid Payload");
   return payload.aud;
-}
+};
 
 export async function siopSession(
   client: any,
@@ -113,7 +113,7 @@ export async function siopSession(
   };
 }
 
-const getJWK = (hexPrivateKey, kid) => {
+const getJWK = (hexPrivateKey:string, kid:any) => {
   const { x, y } = getECKeyfromHexPrivateKey(hexPrivateKey);
   return {
     kid,
@@ -124,13 +124,13 @@ const getJWK = (hexPrivateKey, kid) => {
   };
 };
 
-const getThumbprint = async (hexPrivateKey, kid) => {
+const getThumbprint = async (hexPrivateKey:string, kid:any) => {
   const jwk = getJWK(hexPrivateKey, kid);
   const thumbprint = await calculateThumbprint(jwk, "sha256");
   return thumbprint;
 };
 
-const getECKeyfromHexPrivateKey = (hexPrivateKey) => {
+const getECKeyfromHexPrivateKey = (hexPrivateKey:string) => {
   const secp256 = new ec("secp256k1");
   const privKey = secp256.keyFromPrivate(hexPrivateKey.replace("0x", ""), "hex");
   const pubPoint = privKey.getPublic();

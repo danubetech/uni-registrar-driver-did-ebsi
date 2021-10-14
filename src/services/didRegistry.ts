@@ -3,13 +3,13 @@ import { prepareDidDocument, sendApiTransaction, remove0xPrefix } from "../utils
 import { userOnBoardAuthReq } from "../utils/userOnboarding/userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
+import { didRegistrationResponse } from "../utils/interfaces";
 
 export const didRegistry = async (
   token: string,
   didDocument: object,
-  id_token?: string,
   secretKey?: object
-): Promise<{ didState: didRegResponse }> => {
+): Promise<{ didState: didRegistrationResponse }> => {
   const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
   let client;
   let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
@@ -28,18 +28,15 @@ export const didRegistry = async (
     format: "jwk",
   });
   console.log("publicKeyJwk....." + JSON.stringify(publicKeyJwk));
-  const idToken =
-    id_token != null
-      ? id_token
-      : await (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
-  console.log(idToken);
+  const idToken_response = await userOnBoardAuthReq(token, client, publicKeyJwk);
+  console.log(idToken_response.id_token);
   const buildParam = await buildParams(client, didDocument);
   let param = {
     from: client.address,
     ...buildParam.param,
   };
 
-  await sendApiTransaction("insertDidDocument", idToken, param, client, () => {
+  await sendApiTransaction("insertDidDocument", idToken_response.id_token, param, client, () => {
     console.log(buildParam.info.title);
     console.log(buildParam.info.data);
   });
@@ -84,10 +81,3 @@ const buildParams = async (client: any, didDoc: object) => {
     },
   };
 };
-
-interface didRegResponse {
-  state: string;
-  identifier: string;
-  secret: object;
-  didDocument: object;
-}

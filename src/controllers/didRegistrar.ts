@@ -11,7 +11,6 @@ export const create = async (req: Request, res: Response): Promise<void> => {
   await didRegistry(
     req.body.secret.token,
     req.body.didDocument,
-    req.body.secret.id_token,
     req.body.secret.privateKey
   )
     .then((success) => {
