@@ -41,7 +41,7 @@ export const signDidAuthInternal = async (did:string, payload:any, hexPrivateKey
   return response;
 };
 
-export const createVP = async (did:string, privateKey:any, vc:object) => {
+export const createVP = async (did:string, privateKey:any, vc:any) => {
   const options = {
     resolver: `https://api.preprod.ebsi.eu/did-registry/v2/identifiers`,
     tirUrl: `https://api.preprod.ebsi.eu/trusted-issuers-registry/v2/issuers`,
