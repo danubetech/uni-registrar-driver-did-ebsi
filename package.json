@@ -14,7 +14,7 @@
   "dependencies": {
     "@cef-ebsi/did-jwt": "^1.0.0-alpha.6",
     "@cef-ebsi/siop-auth": "^0.5.2",
-    "@cef-ebsi/verifiable-presentation": "^1.0.0-rc.3",
+    "@cef-ebsi/verifiable-presentation": "^1.0.0-rc.9",
     "@cef-ebsi/wallet-lib": "^1.0.0-rc.1",
     "@types/validator": "^13.6.3",
     "@types/yamljs": "^0.2.31",

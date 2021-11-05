@@ -1,5 +1,4 @@
 import { decodeJWT, verifyEbsiJWT } from "@cef-ebsi/did-jwt";
-import axios from "axios";
 import { OIDC_ISSUE, ES256K } from "../constants";
 import { v4 as uuidv4 } from "uuid";
 import { signDidAuthInternal, prefixWith0x } from "../utils";
@@ -81,7 +80,7 @@ export async function siopSession(
 ): Promise<{
   alg: string;
   nonce: string;
-  response: any;
+  request: any;
 }> {
   const nonce = uuidv4();
   let body: unknown;
@@ -104,12 +103,12 @@ export async function siopSession(
   });
   console.log(didAuthJwt);
   body = didAuthJwt.bodyEncoded;
-  const responseSession = await axios.post(callbackUrl, body);
-  console.log(responseSession.data);
+  //const responseSession = await axios.post(callbackUrl, body);
+  //console.log(responseSession.data);
   return {
     alg,
     nonce,
-    response: responseSession.data,
+    request: body,
   };
 }
 

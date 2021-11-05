@@ -11,13 +11,17 @@ import {
   ES256K,
   ASSERTION_METHOD,
 } from "./constants";
-
+import { Header } from "./types";
 const { EbsiWallet } = require("@cef-ebsi/wallet-lib");
 const { ethers } = require("ethers");
 const base64url = require("base64url");
 const buffer_1 = require("buffer");
 
-const { createVerifiablePresentation } = require("@cef-ebsi/verifiable-presentation");
+import {
+  createVerifiablePresentation,
+  validateVerifiablePresentation,
+  VerifiablePresentation,
+}from "@cef-ebsi/verifiable-presentation";
 const bs58 = require("bs58");
 const crypto = require("crypto");
 
@@ -59,7 +63,6 @@ export const createVP = async (did, privateKey, vc) => {
     holder: did,
   };
   const vpSigner = ES256KSigner(privateKey);
-
   const jwtdata = await createJWT(
     presentation,
     {
@@ -74,7 +77,7 @@ export const createVP = async (did, privateKey, vc) => {
       kid: `${options.resolver}/${did}#keys-1`,
     }
   );
-
+  console.log("Here..........");
   const vpToken = jwtdata.split(".");
 
   const signatureValue = {
@@ -82,7 +85,24 @@ export const createVP = async (did, privateKey, vc) => {
     proofValueName: "jws",
     iat: extractIatFromJwt(jwtdata),
   };
-  return createVerifiablePresentation(presentation, requiredProof, signatureValue, options);
+  console.log(JSON.stringify(presentation));
+
+  const iat = `${new Date(signatureValue.iat * 1000).toISOString().split(".")[0]}Z`;
+
+  const vp: VerifiablePresentation = {
+    ...presentation,
+    proof: {
+      type: "EcdsaSecp256k1Signature2019",
+      created: iat,
+      proofPurpose: requiredProof.proofPurpose,
+      verificationMethod: requiredProof.verificationMethod,
+      jws: signatureValue.proofValue,
+    },
+  };
+  console.log(vp)
+  
+  const x = await createVerifiablePresentation(presentation, requiredProof, signatureValue, options);
+  return x;
 };
 
 const extractIatFromJwt = (jwt) => {
@@ -103,27 +123,13 @@ export const prepareDidDocument = async (
   privateKeyController,
   reqDidDoc
 ) => {
-  let publicKey;
   const controller = new ethers.Wallet(privateKeyController);
-  switch (publicKeyType) {
-    case "publicKeyHex":
-      publicKey = { publicKeyHex: controller.publicKey.slice(2) };
-      break;
-    case "publicKeyJwk":
-      publicKey = {
-        publicKeyJwk: new EbsiWallet(controller.privateKey).getPublicKey({
-          format: "jwk",
-        }),
-      };
-      break;
-    case "publicKeyBase58":
-      publicKey = {
-        publicKeyBase58: bs58.encode(fromHexString(controller.publicKey.slice(2))),
-      };
-      break;
-    default:
-      throw new Error(`invalid type ${publicKeyType}`);
-  }
+
+  let publicKey = {
+    publicKeyJwk: new EbsiWallet(controller.privateKey).getPublicKey({
+      format: "jwk",
+    }),
+  };
   const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc)).didDoc;
   return await prepareDIDRegistryObject(didDocument);
 };
@@ -155,10 +161,11 @@ export const sendApiTransaction = async (
   token: string,
   param: any,
   client: any,
+  header:Header,
   callback: any
 ) => {
   const url = `https://api.preprod.ebsi.eu/did-registry/v2/jsonrpc`;
-  const response = await jsonrpcSendTransaction(client, token, url, method, param);
+  const response = await jsonrpcSendTransaction(client, token, url, method, param,header);
 
   if (response.status < 400 && (await waitToBeMined(response.data.result))) {
     callback();
@@ -190,7 +197,7 @@ const constructDidDoc = async (
 
 const defaultDidDoc = (didUser: string, publicKey: object) => {
   return {
-    "@context": [CONTEXT_W3C_DID, CONTEXT_W3C_SEC],
+    "@context": [CONTEXT_W3C_DID],
     id: didUser,
     verificationMethod: [verificationMethod(didUser, publicKey)],
     authentication: [`${didUser}#keys-1`],
@@ -236,12 +243,24 @@ const verificationMethod = (didUser: string, publicKey: object) => {
   };
 };
 
-export const jsonrpcSendTransaction = async (client, token, url, method, param) => {
+export const jsonrpcSendTransaction = async (client, token, url, method, param, header: Header) => {
   const body = jsonrpcBody(method, [param]);
-  console.log(JSON.stringify(param));
-  const response = await axios.post(url, body, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  console.log(JSON.stringify(body, null, 2));
+  console.log("Request to build DID document insert tx");
+  console.log("request url " + url);
+  const response = await axios
+    .post(url, body, {
+      headers: { Authorization: `Bearer ${token}`,Conformance: header.Conformance },
+    })
+    .catch((error) => {
+      console.log("send Insert DID doc tx to ledger failed");
+      console.error(error.message);
+      throw new Error(error.message);
+    });
+    
+    console.log(response.status);
+    console.log(response.data);
+
   const unsignedTransaction = response.data.result;
   const uTx = formatEthersUnsignedTransaction(JSON.parse(JSON.stringify(unsignedTransaction)));
   console.log("unsigned tx");
@@ -254,10 +273,21 @@ export const jsonrpcSendTransaction = async (client, token, url, method, param) 
   const bodySend = jsonrpcBody("signedTransaction", [
     paramSignedTransaction(unsignedTransaction, sgnTx),
   ]);
+  console.log("Request to send signed tx ");
+  console.log("request url " + url);
 
-  return axios.post(url, bodySend, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const responseSignedTx = await axios
+    .post(url, bodySend, {
+      headers: { Authorization: `Bearer ${token}`, Conformance: header.Conformance },
+    })
+    .catch((error) => {
+      console.log("Send tx to ledger failed");
+      console.error(error.message);
+      throw new Error(error.message);
+    });
+  console.log(responseSignedTx.status);
+  console.log(responseSignedTx.data);
+  return responseSignedTx;
 };
 
 export function jsonrpcBody(method, params) {

@@ -1,9 +1,9 @@
 import { prepareDidDocument, sendApiTransaction, remove0xPrefix } from "../utils/utils";
 
-import { userOnBoardAuthReq } from "../utils/userOnboarding/userOnboarding";
+import { userOnBoardAuthReq} from "../utils/userOnboarding/userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
-
+import { Header } from "../utils/types";
 export const didRegistry = async (
   token: string,
   didDocument: object,
@@ -28,10 +28,9 @@ export const didRegistry = async (
     format: "jwk",
   });
   console.log("publicKeyJwk....." + JSON.stringify(publicKeyJwk));
-  const idToken =
-    id_token != null
-      ? id_token
-      : await (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
+  const onboardReq = await userOnBoardAuthReq(token, client, publicKeyJwk)
+  const idToken: string = onboardReq.id_token;
+  const headers: Header = onboardReq.headers;
   console.log(idToken);
   const buildParam = await buildParams(client, didDocument);
   let param = {
@@ -39,7 +38,7 @@ export const didRegistry = async (
     ...buildParam.param,
   };
 
-  await sendApiTransaction("insertDidDocument", idToken, param, client, () => {
+  await sendApiTransaction("insertDidDocument", idToken, param, client,headers, () => {
     console.log(buildParam.info.title);
     console.log(buildParam.info.data);
   });

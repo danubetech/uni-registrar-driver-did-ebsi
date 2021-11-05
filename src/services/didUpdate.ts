@@ -2,6 +2,7 @@ import { prepareUpdateDidDocument, sendApiTransaction } from "../utils/utils";
 import { userOnBoardAuthReq } from "../utils/userOnboarding/userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
+import { Header} from "../utils/types"
 
 export const didUpdate = async (
   token: string,
@@ -25,8 +26,9 @@ export const didUpdate = async (
   const wallet = new EbsiWallet("0x" + privateKey);
   const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
 
-
-  const idToken = (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
+  const onboardReq = await userOnBoardAuthReq(token, client, publicKeyJwk);
+  const idToken: string = onboardReq.id_token;
+  const headers: Header = onboardReq.headers;
 
   // Creates a URI using the wallet backend that manages entity DID keys
   let method = "updateDidDocument";
@@ -50,7 +52,7 @@ export const didUpdate = async (
     ...buildParam.param,
   };
 
-  await sendApiTransaction(method, idToken, param, client, () => {
+  await sendApiTransaction(method, idToken, param, client,headers, () => {
     console.log(buildParam.info.title);
     console.log(buildParam.info.data);
   });
