@@ -10,7 +10,8 @@ registerDid.post("/", async (req: Request, res: Response) => {
     let response;
     if (req.body.secret == null) throw "Invalid params";
     console.log(req.body);
-    if (req.body.options.clientSideSecret) {
+    if (req.body.options.clientSideSecret==true) {
+      console.log("Client Secret Mode");
       response = await didRegistryClientSideSecret(
         req.body.options.identifier,
         req.body.options.clientAddress,
@@ -21,6 +22,7 @@ registerDid.post("/", async (req: Request, res: Response) => {
         req.body.options.signedTx
       );
     } else {
+      console.log("Internal Secret Mode")
       response = await didRegistry(
         req.body.secret.token,
         req.body.secret.id_token,

@@ -30,10 +30,7 @@ export const didRegistry = async (
     format: "jwk",
   });
   console.log("publicKeyJwk....." + JSON.stringify(publicKeyJwk));
-  const idToken =
-    id_token != null
-      ? id_token
-      : await (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
+  const idToken =(await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
   console.log(idToken);
 
   const buildParam = await buildParams({
