@@ -159,7 +159,7 @@ export const constructDidDoc = async (
     //\\ TODO: construct the did doc and insert the key properly
     let doc: object = didDocument;
     if (!("@context" in didDocument) || doc["@context"].length == 0)
-      doc["@context"] = [CONTEXT_W3C_DID, CONTEXT_W3C_SEC];
+      doc["@context"] = [CONTEXT_W3C_DID];
     doc["id"] = didUser;
     doc["verificationMethod"] = verificationMethod(didUser, publicKey);
     if (!("authentication" in didDocument) || doc["authentication"].length == 0)
@@ -172,7 +172,7 @@ export const constructDidDoc = async (
 
 const defaultDidDoc = (didUser: string, publicKey: Array<object>) => {
   return {
-    "@context": [CONTEXT_W3C_DID, CONTEXT_W3C_SEC],
+    "@context": [CONTEXT_W3C_DID],
     id: didUser,
     verificationMethod: verificationMethod(didUser, publicKey),
     authentication: [`${didUser}#keys-1`],
@@ -238,11 +238,13 @@ const verificationMethod = (didUser: string, publicKey: Array<object>) => {
 
   for (let i = 0; i < publicKey.length; i++) {
     verificationMethodObject.push({
-      id: `${didUser}#keys-${i+1}`,
+      id: `${didUser}#keys-${i + 1}`,
       controller: didUser,
-      ...publicKey[i],
+      type: "JsonWebKey2020",
+      publicKeyJwk: { ...publicKey[i] },
     });
   }
+  console.log("Verification method")
   console.log(verificationMethodObject);
   return verificationMethodObject;
 };
@@ -258,6 +260,9 @@ export const jsonrpcSendTransaction = async (
   console.log(JSON.stringify(param));
   const response = await axios.post(url, body, {
     headers: { Authorization: `Bearer ${token}` },
+  }).catch(error => { 
+    console.log(error.message)
+    throw error(error.message);
   });
   const unsignedTransaction = response.data.result;
   const uTx = formatEthersUnsignedTransaction(
@@ -273,9 +278,14 @@ export const jsonrpcSendTransaction = async (
     paramSignedTransaction(unsignedTransaction, sgnTx),
   ]);
 
-  return axios.post(url, bodySend, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  return axios
+    .post(url, bodySend, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .catch((error) => {
+      console.log(error.message);
+      throw error(error.message);
+    });
 };
 
 export const jsonrpcBody = (method, params) => {

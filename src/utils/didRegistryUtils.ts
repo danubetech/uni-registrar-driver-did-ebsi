@@ -5,6 +5,7 @@ export const buildParams = async (buildParamsObj: buildParamsObject) => {
   const controllerDid = buildParamsObj.did;
   let newDidDocument;
   if (buildParamsObj.publicKey) {
+    console.log(buildParamsObj.publicKey);
     newDidDocument = await prepareDidDocumentWithPublicKey(
       controllerDid,
       buildParamsObj.publicKey,
@@ -17,7 +18,7 @@ export const buildParams = async (buildParamsObj: buildParamsObject) => {
     timestampDataBuffer,
     didVersionMetadataBuffer,
   } = newDidDocument;
-  console.log(newDidDocument);
+  console.log(JSON.stringify(newDidDocument,null,2));
 
   const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
 

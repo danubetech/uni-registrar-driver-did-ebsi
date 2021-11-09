@@ -13,13 +13,10 @@ registerDid.post("/", async (req: Request, res: Response) => {
     if (req.body.options.clientSideSecret==true) {
       console.log("Client Secret Mode");
       response = await didRegistryClientSideSecret(
-        req.body.options.identifier,
-        req.body.options.clientAddress,
+        req.body.options,
         req.body.secret.token,
         req.body.didDocument,
-        req.body.options.publicKey,
         req.body.jobId,
-        req.body.options.signedTx
       );
     } else {
       console.log("Internal Secret Mode")

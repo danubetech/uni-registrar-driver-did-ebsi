@@ -2,29 +2,31 @@ import { decodeJWT, verifyEbsiJWT } from "@cef-ebsi/did-jwt";
 import axios from "axios";
 import { OIDC_ISSUE, ES256K } from "../types";
 import { v4 as uuidv4 } from "uuid";
-import { signDidAuthInternal, prefixWith0x } from "./utils";
+import { signDidAuthInternal } from "./utils";
 import { calculateThumbprint } from "jose/jwk/thumbprint";
-import { ec } from "elliptic";
-import { Base64 } from "js-base64";
+import { JwkKeyFormat } from "./types";
 
-export const createAuthenticationResponse = async (didAuthResponseCall) => {
+export const createAuthenticationResponse = async (
+  didAuthResponseCall,
+  publicKeyJWK: JwkKeyFormat
+) => {
   if (
     !didAuthResponseCall ||
-    !didAuthResponseCall.hexPrivatekey ||
     !didAuthResponseCall.did ||
     !didAuthResponseCall.redirectUri
   )
     throw new Error("Invalid parmas");
 
-  const payload = await createAuthenticationResponsePayload(
-    didAuthResponseCall
-  );
+  const payload = await createAuthenticationResponsePayload(didAuthResponseCall, publicKeyJWK);
+  console.log("payload");
   // signs payload using internal libraries
+  console.log(payload);
   const jwt = await signDidAuthInternal(
     didAuthResponseCall.did,
     payload,
     didAuthResponseCall.hexPrivatekey
   );
+  console.log(jwt);
   const params = `id_token=${jwt}`;
   let uriResponse = {
     urlEncoded: "",
@@ -42,25 +44,21 @@ export const createAuthenticationResponse = async (didAuthResponseCall) => {
   }
 
   if (didAuthResponseCall.response_mode === "query") {
-    uriResponse.urlEncoded = encodeURI(
-      `${didAuthResponseCall.redirectUri}?${params}`
-    );
+    uriResponse.urlEncoded = encodeURI(`${didAuthResponseCall.redirectUri}?${params}`);
     return uriResponse;
   }
   uriResponse.response_mode = "fragment";
-  uriResponse.urlEncoded = encodeURI(
-    `${didAuthResponseCall.redirectUri}#${params}`
-  );
+  uriResponse.urlEncoded = encodeURI(`${didAuthResponseCall.redirectUri}#${params}`);
   return uriResponse;
 };
 
-const createAuthenticationResponsePayload = async (input) => {
+export const createAuthenticationResponsePayload = async (input, publicKeyJWK: JwkKeyFormat) => {
   const responsePayload = {
     iss: OIDC_ISSUE,
-    sub: await getThumbprint(input.hexPrivatekey, null),
+    sub: await getThumbprint(publicKeyJWK),
     aud: input.redirectUri,
     nonce: input.nonce,
-    sub_jwk: getJWK(input.hexPrivatekey, `${input.did}#key-1`),
+    sub_jwk: publicKeyJWK,
     claims: input.claims,
   };
   return responsePayload;
@@ -73,8 +71,7 @@ export const verifyAuthenticationRequest = async (didAuthJwt, didRegistry) => {
     didRegistry,
   };
   const verifiedJWT = await verifyEbsiJWT(didAuthJwt, options);
-  if (!verifiedJWT || !verifiedJWT.payload)
-    throw Error("Signature Verification Error");
+  if (!verifiedJWT || !verifiedJWT.payload) throw Error("Signature Verification Error");
   return verifiedJWT.payload;
 };
 
@@ -88,37 +85,43 @@ const getAudience = (jwt) => {
 
 export const siopSession = async (
   client: any,
-  publicKey: object,
+  publicKeyJWK: JwkKeyFormat,
   callbackUrl: string,
-  verifiedClaims?: string
+  nonce: string,
+  verifiedClaims?: string,
 ): Promise<{
   alg: string;
   nonce: string;
   response: any;
 }> => {
-  const nonce = uuidv4();
   let body: unknown;
   let alg: string;
 
   // using client from ethuser
   alg = ES256K;
-  const didAuthJwt = await createAuthenticationResponse({
-    hexPrivatekey: prefixWith0x(client.privateKey),
-    did: client.did,
-    nonce,
-    redirectUri: callbackUrl,
-    response_mode: "form_post",
-    ...(verifiedClaims && {
-      claims: {
-        verified_claims: verifiedClaims,
-        encryption_key: publicKey,
-      },
-    }),
-  });
+  
+  if (publicKeyJWK == null) throw new Error("Public Key JWK null");
+  console.log(publicKeyJWK)
+  const didAuthJwt = await createAuthenticationResponse(
+    {
+      did: client.did,
+      hexPrivatekey:client.privateKey,
+      nonce,
+      redirectUri: callbackUrl,
+      response_mode: "form_post",
+      ...(verifiedClaims && {
+        claims: {
+          verified_claims: verifiedClaims,
+          encryption_key: publicKeyJWK,
+        },
+      }),
+    },
+    publicKeyJWK
+  );
   console.log(didAuthJwt);
   body = didAuthJwt.bodyEncoded;
   const responseSession = await axios.post(callbackUrl, body);
-  console.log(responseSession);
+  console.log(responseSession.data);
   return {
     alg,
     nonce,
@@ -126,32 +129,7 @@ export const siopSession = async (
   };
 };
 
-const getJWK = (hexPrivateKey, kid) => {
-  const { x, y } = getECKeyfromHexPrivateKey(hexPrivateKey);
-  return {
-    kid,
-    kty: "EC",
-    crv: "secp256k1",
-    x,
-    y,
-  };
-};
-
-const getThumbprint = async (hexPrivateKey, kid) => {
-  const jwk = getJWK(hexPrivateKey, kid);
+const getThumbprint = async (jwk) => {
   const thumbprint = await calculateThumbprint(jwk, "sha256");
   return thumbprint;
-};
-
-const getECKeyfromHexPrivateKey = (hexPrivateKey) => {
-  const secp256 = new ec("secp256k1");
-  const privKey = secp256.keyFromPrivate(
-    hexPrivateKey.replace("0x", ""),
-    "hex"
-  );
-  const pubPoint = privKey.getPublic();
-  return {
-    x: Base64.fromUint8Array(pubPoint.getX().toArrayLike(Buffer), true),
-    y: Base64.fromUint8Array(pubPoint.getY().toArrayLike(Buffer), true),
-  };
 };
