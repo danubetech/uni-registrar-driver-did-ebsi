@@ -1,10 +1,11 @@
 import { jsonrpcBody, paramSignedTransaction } from "./utils/utils";
-import { didRegResponse, buildParams } from "./utils/didRegistryUtils";
+import {  buildParams } from "./utils/didRegistryUtils";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { step1, step2, step3, step4, } from "./userOnboardingClientSideSecretMode"
 import { DidRegistrationResponse } from "./utils/types";
+import { Base64 } from "js-base64";
 import {
   OIDC_ISSUE,
   ES256K,
@@ -31,18 +32,25 @@ export const didRegistryClientSideSecret = async (
 
   switch (currentState) {
     case "initial":
-      const did = await EbsiWallet.createDid();
-      let keyPair = ec.keyFromPublic(options.publicKeyHex, "hex");
+      console.log(currentState);
+      const did = EbsiWallet.createDid();
+      let keyPair =await  ec.keyFromPublic(options.publicKey, "hex");
       let pubkey = "0x" + keyPair.getPublic(false, "hex").substr(2);
       let adr = "0x".concat(
         web3.utils.keccak256(pubkey).substr(web3.utils.keccak256(pubkey).length - 40)
       );
       const clientAddress = web3.utils.toChecksumAddress(adr);
-      const jwkPK = ec.keyFromPublic(options.publicKeyHex, "jwk");
+      const jwkPK = {
+        kty: "EC",
+        crv: "secp256k1",
+        x: Base64.fromUint8Array(keyPair.getPublic().getX().toArrayLike(Buffer), true),
+        y: Base64.fromUint8Array(keyPair.getPublic().getY().toArrayLike(Buffer), true),
+      };
+      console.log(jwkPK);
       const req1 = await step1(did, jwkPK);
-
-      let jobId = uuidv4();
-      let objectStore = {
+      console.log(req1);
+      let job_Id = uuidv4();
+      const objectStore = {
         did: did,
         didDocument: didDocument,
         unSignedTx: null,
@@ -51,9 +59,9 @@ export const didRegistryClientSideSecret = async (
         publicKeyJwk: jwkPK,
         clientAddress: clientAddress,
       };
-      map.set(jobId, objectStore);
+      map.set(job_Id, objectStore);
       return {
-        jobId: jobId,
+        jobId: job_Id,
         didState: {
           state: "action",
           action: "signOnboardRequest",
@@ -69,11 +77,25 @@ export const didRegistryClientSideSecret = async (
         },
       };
     case "signOnboardRequest":
-      let objectMap = map.get(jobID);
-      if (objectMap == null) throw new Error("Invalid JobId");
-      console.log(objectMap.did);
-      console.log(objectMap.didDocument);
-      const req2 = await step2(objectMap.authReqPayload, options.signedPayload, objectMap.token);
+      console.log(currentState);
+      const objectMap1 = map.get(jobID);
+      if (objectMap1 == null) throw new Error("Invalid JobId");
+      console.log(objectMap1.did);
+      console.log(objectMap1.token);
+      const req2 = await step2(objectMap1.authReqPayload, options.signedPayload, objectMap1.token);
+
+      const objectStore1 = {
+        did: objectMap1.did,
+        didDocument: objectMap1.didDocument,
+        unSignedTx: null,
+        token: objectMap1.token,
+        authReqPayload: objectMap1.authRequestObject,
+        publicKeyJwk: objectMap1.publicKeyJwk,
+        clientAddress: objectMap1.clientAddress,
+      };
+      console.log(objectStore1);
+      map.delete(jobID);
+      map.set(jobID, objectStore1);
 
       return {
         jobId: jobID,
@@ -83,27 +105,30 @@ export const didRegistryClientSideSecret = async (
           signingRequest: {
             request1: {
               payload: req2.verifiableCredential,
-              kid: `${objectMap.did}#key-1`,
+              kid: `${objectMap1.did}#key-1`,
               alg: ES256K,
             },
           },
         },
       };
     case "signVerifiableCredential":
-      objectMap = map.get(jobID);
-      if (objectMap == null) throw new Error("Invalid JobId");
-      const req3 = await step3(options.signedPayload, objectMap.publicKeyJwk, objectMap.did);
+      console.log(currentState);
+      const objectMap2 = map.get(jobID);
+      if (objectMap2 == null) throw new Error("Invalid JobId");
+      console.log(options.signedPayload);
+      const req3 = await step3(options.signedPayload, objectMap2.publicKeyJwk, objectMap2.did);
 
-      objectStore = {
-        did: objectMap.did,
-        didDocument: objectMap.didDocument,
+      const objectStore2 = {
+        did: objectMap2.did,
+        didDocument: objectMap2.didDocument,
         unSignedTx: null,
-        token: objectMap.token,
+        token: objectMap2.token,
         authReqPayload: req3.authRequestObject,
-        publicKeyJwk: objectMap.publicKeyJwk,
-        clientAddress: objectMap.clientAddress,
+        publicKeyJwk: objectMap2.publicKeyJwk,
+        clientAddress: objectMap2.clientAddress,
       };
-      map.set(jobID, objectStore);
+      map.delete(jobID);
+      map.set(jobID, objectStore2);
 
       return {
         jobId: jobID,
@@ -113,7 +138,7 @@ export const didRegistryClientSideSecret = async (
           signingRequest: {
             request1: {
               payload: req3.payload,
-              kid: `${objectMap.did}#key-1`,
+              kid: `${objectMap2.did}#key-1`,
               alg: ES256K,
               typ: "JWT",
               issuer: OIDC_ISSUE,
@@ -123,9 +148,22 @@ export const didRegistryClientSideSecret = async (
       };
 
     case "signSIOPRequest":
-      objectMap = map.get(jobID);
-      if (objectMap == null) throw new Error("Invalid JobId");
-      const req4 = await step4(objectMap.authReqPayload, options.signedPayload);
+      console.log(currentState);
+      const objectMap3 = map.get(jobID);
+      if (objectMap3 == null) throw new Error("Invalid JobId");
+      const req4 = await step4(objectMap3.authReqPayload, options.signedPayload);
+
+      const objectStore3 = {
+        did: objectMap3.did,
+        didDocument: objectMap3.didDocument,
+        unSignedTx: null,
+        token: objectMap3.token,
+        authReqPayload: objectMap3.authRequestObject,
+        publicKeyJwk: objectMap3.publicKeyJwk,
+        clientAddress: objectMap3.clientAddress,
+      };
+      map.delete(jobID);
+      map.set(jobID, objectStore3);
 
       return {
         jobId: jobID,
@@ -135,7 +173,7 @@ export const didRegistryClientSideSecret = async (
           signingRequest: {
             request1: {
               payload: req4.siopResponse,
-              kid: `${objectMap.did}#key-1`,
+              kid: `${objectMap3.did}#key-1`,
               alg: ES256K,
               typ: "JWT",
               issuer: OIDC_ISSUE,
@@ -144,31 +182,32 @@ export const didRegistryClientSideSecret = async (
         },
       };
     case "decodeToken":
-      objectMap = map.get(jobID);
-      if (objectMap == null) throw new Error("Invalid JobId");
+      console.log(currentState);
+      const objectMap4 = map.get(jobID);
+      if (objectMap4 == null) throw new Error("Invalid JobId");
 
       const buildParam = await buildParams({
-        did: objectMap.did,
-        publicKey: objectMap.publicKeyJwk,
-        didDoc: objectMap.didDocument,
+        did: objectMap4.did,
+        publicKey: objectMap4.publicKeyJwk,
+        didDoc: objectMap4.didDocument,
       });
       let param = {
-        from: clientAddress,
+        from: objectMap4.clientAddress,
         ...buildParam.param,
       };
       didDoc = buildParam.info.data;
       const uTx = await constructUnsignedTx(token, url, "insertDidDocument", param);
-      objectStore = {
-        did: objectMap.did,
+      const objectStore4 = {
+        did: objectMap4.did,
         didDocument: didDoc,
         unSignedTx: unSigned,
         token: token,
         authReqPayload: null,
-        publicKeyJwk: objectMap.publicKeyJwk,
-        clientAddress: objectMap.clientAddress,
+        publicKeyJwk: objectMap4.publicKeyJwk,
+        clientAddress: objectMap4.clientAddress,
       };
-      console.log(jobID);
-      map.set(jobID, objectStore);
+      map.delete(jobID);
+      map.set(jobID, objectStore4);
       return {
         jobId: jobID,
         didState: {
@@ -184,11 +223,12 @@ export const didRegistryClientSideSecret = async (
         },
       };
     case "signEthereumTxRequest":
-      objectMap = map.get(jobID);
-      if (objectMap == null) throw new Error("Invalid JobId");
-      console.log(objectMap.did);
-      console.log(objectMap.didDocument);
-      const res = await constructSignedTx(token, url, options.signedPayload, objectMap.unSignedTx);
+      console.log(currentState);
+      const objectMap5 = map.get(jobID);
+      if (objectMap5 == null) throw new Error("Invalid JobId");
+      console.log(objectMap5.did);
+      console.log(objectMap5.didDocument);
+      const res = await constructSignedTx(token, url, options.signedPayload, objectMap5.unSignedTx);
       console.log("Signed Tx response..............");
       console.log(res.data);
       // remove jobId after completion
@@ -197,8 +237,8 @@ export const didRegistryClientSideSecret = async (
         jobId: null,
         didState: {
           state: "finished",
-          identifier: objectMap.did,
-          didDocument: objectMap.didDocument,
+          identifier: objectMap5.did,
+          didDocument: objectMap5.didDocument,
         },
       };
     default:

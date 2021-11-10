@@ -18,8 +18,7 @@ export const buildParams = async (buildParamsObj: buildParamsObject) => {
     timestampDataBuffer,
     didVersionMetadataBuffer,
   } = newDidDocument;
-  console.log(JSON.stringify(newDidDocument,null,2));
-
+  console.log(JSON.stringify(newDidDocument));
   const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
 
   return {
@@ -43,7 +42,7 @@ const prepareDidDocumentWithPublicKey = async (
   publicKey: Array<object>,
   reqDidDoc: object
 ) => {
-  const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc)).didDoc;
+  const didDocument = (await constructDidDoc(didUser, [publicKey], reqDidDoc)).didDoc;
   return await prepareDIDRegistryObject(didDocument);
 };
 

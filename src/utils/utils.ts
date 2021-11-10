@@ -2,12 +2,10 @@ import { ES256KSigner, createJWT } from "@cef-ebsi/did-jwt";
 import axios from "axios";
 import {
   CONTEXT_W3C_DID,
-  CONTEXT_W3C_SEC,
   CONTEXT_W3C_VC,
   OIDC_ISSUE,
   VERIFIABLE_PRESENTATION,
   ECDSA_SECP_256_K1_SIGNATURE_2019,
-  ECDSA_SECP_256_K1_VERIFICATION_KEY_2019,
   ES256K,
   ASSERTION_METHOD,
 } from "../types";

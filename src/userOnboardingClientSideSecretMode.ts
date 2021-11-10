@@ -283,6 +283,7 @@ export const step2 = async (
       throw Error("Invalid onboarding token");
     });
   const verifiableCredential: VerifiableCredential = response.data.verifiableCredential;
+  console.log(verifiableCredential);
   return { verifiableCredential: verifiableCredential };
 };
 
@@ -327,6 +328,7 @@ export const step1 = async (
     redirectUri: uriAuthDecoded.client_id,
     response_mode: "fragment",
   };
+  console.log(authReqObject);
 
   return {
     payload: await createAuthenticationResponsePayload(authReqObject, publicKeyJwk),

@@ -1,9 +1,9 @@
 export type JwkKeyFormat = {
-  kid: string;
   kty: string;
   crv: string;
   x: string;
   y: string;
+  kid?: string;
   d?: string;
 };
 
