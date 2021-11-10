@@ -42,6 +42,7 @@ export type DidRegistrationResponse = {
 
 type SigningPayload = {
   payload: unknown;
+  did?:string,
   kid?: string;
   alg?: string;
   typ?: string;

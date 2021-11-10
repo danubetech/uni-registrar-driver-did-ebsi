@@ -68,6 +68,7 @@ export const didRegistryClientSideSecret = async (
           signingRequest: {
             request1: {
               payload: req1.payload,
+              did:did,
               kid: `${did}#key-1`,
               alg: ES256K,
               typ: "JWT",
@@ -107,6 +108,7 @@ export const didRegistryClientSideSecret = async (
               payload: req2.verifiableCredential,
               kid: `${objectMap1.did}#key-1`,
               alg: ES256K,
+              did: objectMap1.did,
             },
           },
         },
@@ -140,6 +142,7 @@ export const didRegistryClientSideSecret = async (
               payload: req3.payload,
               kid: `${objectMap2.did}#key-1`,
               alg: ES256K,
+              did: objectMap2.did,
               typ: "JWT",
               issuer: OIDC_ISSUE,
             },
@@ -216,7 +219,7 @@ export const didRegistryClientSideSecret = async (
           signingRequest: {
             request1: {
               payload: uTx,
-              kid: `${did}#key-1`,
+              kid: `${objectMap4.did}#key-1`,
               alg: "secp256k1",
             },
           },
@@ -228,7 +231,12 @@ export const didRegistryClientSideSecret = async (
       if (objectMap5 == null) throw new Error("Invalid JobId");
       console.log(objectMap5.did);
       console.log(objectMap5.didDocument);
-      const res = await constructSignedTx(token, url, options.signedPayload, objectMap5.unSignedTx);
+      const res = await constructSignedTx(
+        objectMap5.token,
+        url,
+        options.signedPayload,
+        objectMap5.unSignedTx
+      );
       console.log("Signed Tx response..............");
       console.log(res.data);
       // remove jobId after completion
