@@ -103,27 +103,11 @@ export const prepareDidDocument = async (
   privateKeyController,
   reqDidDoc
 ) => {
-  let publicKey;
   const controller = new ethers.Wallet(privateKeyController);
-  switch (publicKeyType) {
-    case "publicKeyHex":
-      publicKey = { publicKeyHex: controller.publicKey.slice(2) };
-      break;
-    case "publicKeyJwk":
-      publicKey = {
-        publicKeyJwk: new EbsiWallet(controller.privateKey).getPublicKey({
-          format: "jwk",
-        }),
-      };
-      break;
-    case "publicKeyBase58":
-      publicKey = {
-        publicKeyBase58: bs58.encode(fromHexString(controller.publicKey.slice(2))),
-      };
-      break;
-    default:
-      throw new Error(`invalid type ${publicKeyType}`);
-  }
+      
+  const publicKey = new EbsiWallet(controller.privateKey).getPublicKey({
+    format: "jwk",
+  });
   const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc)).didDoc;
   return await prepareDIDRegistryObject(didDocument);
 };
@@ -177,7 +161,7 @@ const constructDidDoc = async (
     //\\ TODO: construct the did doc and insert the key properly
     let doc: object = didDocument;
     if (!("@context" in didDocument) || doc["@context"].length == 0)
-      doc["@context"] = [CONTEXT_W3C_DID, CONTEXT_W3C_SEC];
+      doc["@context"] = [CONTEXT_W3C_DID];
     doc["id"] = didUser;
     doc["verificationMethod"] = [verificationMethod(didUser, publicKey)];
     if (!("authentication" in didDocument) || doc["authentication"].length == 0)
@@ -190,7 +174,7 @@ const constructDidDoc = async (
 
 const defaultDidDoc = (didUser: string, publicKey: object) => {
   return {
-    "@context": [CONTEXT_W3C_DID, CONTEXT_W3C_SEC],
+    "@context": [CONTEXT_W3C_DID],
     id: didUser,
     verificationMethod: [verificationMethod(didUser, publicKey)],
     authentication: [`${didUser}#keys-1`],
@@ -232,7 +216,7 @@ const verificationMethod = (didUser: string, publicKey: object) => {
     id: `${didUser}#keys-1`,
     type: JSON_WEB_Key_2020,
     controller: didUser,
-    ...publicKey,
+    publicKeyJwk: { ...publicKey },
   };
 };
 

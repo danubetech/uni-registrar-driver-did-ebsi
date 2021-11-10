@@ -18,8 +18,8 @@ COPY ./ ./
 RUN yarn install
 
 # TypeScript
-#RUN yarn build
+RUN yarn build
 # Start
 
-CMD [ "yarn", "dev" ]
+CMD [ "yarn", "start" ]
 EXPOSE 9080

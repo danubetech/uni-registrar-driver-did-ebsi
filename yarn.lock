@@ -12,7 +12,7 @@
     call-me-maybe "^1.0.1"
     js-yaml "^4.1.0"
 
-"@cef-ebsi/did-jwt@^1.0.0-alpha.5", "@cef-ebsi/did-jwt@^1.0.0-alpha.6", "@cef-ebsi/did-jwt@^1.0.0-alpha.8":
+"@cef-ebsi/did-jwt@^1.0.0-alpha.6":
   version "1.0.0-alpha.10"
   resolved "https://registry.npmjs.org/@cef-ebsi/did-jwt/-/did-jwt-1.0.0-alpha.10.tgz"
   integrity sha512-7Qy+ht8X35C9BVL9sWWp7KHQ9+TKKXj9ZJNlW3VM/Yr3pc1K9CXJIJrh0+JwykJP7NQBJhxDnD6AiRuh0C1m1w==
@@ -20,6 +20,20 @@
     axios "^0.21.4"
     did-jwt "^5.8.0"
     did-resolver "^3.1.1"
+
+"@cef-ebsi/ebsi-did-resolver@^1.0.0-alpha.3":
+  version "1.0.0-alpha.3"
+  resolved "https://registry.yarnpkg.com/@cef-ebsi/ebsi-did-resolver/-/ebsi-did-resolver-1.0.0-alpha.3.tgz#5f346cbfccae235ef04a9c3f2945ce5612c29a52"
+  integrity sha512-I0TGfV32Rs6uCLNOu64GXD2bM3vhfKR1GwRiJldTWDPKCX6l7T0qV8eTucnpKmqVwGoOdxI2a3OQlwHHBY3wew==
+  dependencies:
+    "@cef-ebsi/problem-details-errors" "^1.0.0-alpha.9"
+    axios "^0.23.0"
+    did-resolver "^3.1.3"
+
+"@cef-ebsi/problem-details-errors@^1.0.0-alpha.9":
+  version "1.0.0-alpha.9"
+  resolved "https://registry.yarnpkg.com/@cef-ebsi/problem-details-errors/-/problem-details-errors-1.0.0-alpha.9.tgz#48505793189a1f391067b020c4522bb206c43df3"
+  integrity sha512-cDLvae7dhgEID4RHnQRtyGOhvA+cHQVHOd7PIB3m9L89uE2TKL1IxGK21DTPbdXzhdHfL4WXU6s2ycTt0bU6Gg==
 
 "@cef-ebsi/siop-auth@^0.5.2":
   version "0.5.2"
@@ -37,42 +51,45 @@
     querystring "^0.2.1"
     uuid "^8.3.2"
 
-"@cef-ebsi/verifiable-credential@^1.0.0-rc.3":
-  version "1.0.0-rc.3"
-  resolved "https://registry.npmjs.org/@cef-ebsi/verifiable-credential/-/verifiable-credential-1.0.0-rc.3.tgz"
-  integrity sha512-wcLtXGt7gRTkaaqR7GtOa3nO3a7H3yB4uAqLNH0wmuvTMvTu6WsaIqzWZeouGCXmqzt3uEF2uY7Ff7ZFsgCSxw==
+"@cef-ebsi/verifiable-credential@^1.0.0-rc.10":
+  version "1.0.0-rc.10"
+  resolved "https://registry.yarnpkg.com/@cef-ebsi/verifiable-credential/-/verifiable-credential-1.0.0-rc.10.tgz#e26c65e21d604ed507784002d9570abca6f2fac7"
+  integrity sha512-SMdLe+lFOK3W3qzyMZRd/rUriK29qG+v7D/MqpZ99zW4++NAoyzumxoe9PJ2DVZEUVdioTYVzV9XIhIfl47D0w==
   dependencies:
-    "@cef-ebsi/did-jwt" "^1.0.0-alpha.5"
-    axios "^0.21.1"
+    "@cef-ebsi/ebsi-did-resolver" "^1.0.0-alpha.3"
+    axios "^0.23.0"
     canonicalize "^1.0.5"
-    did-resolver "^3.1.0"
-    joi "^17.4.0"
-    js-base64 "^3.6.0"
+    did-jwt "^5.9.0"
+    did-resolver "^3.1.3"
+    joi "^17.4.2"
+    multiformats "^9.4.9"
 
-"@cef-ebsi/verifiable-presentation@^1.0.0-rc.3":
-  version "1.0.0-rc.3"
-  resolved "https://registry.npmjs.org/@cef-ebsi/verifiable-presentation/-/verifiable-presentation-1.0.0-rc.3.tgz"
-  integrity sha512-hm7h2NFnhXzNzA5c3zvl2r5zyfds0vX0V3J3Pvh5+uY9/obIHoj841T5SQ10z5dxHiW4a2/ZP29lIDmuaaO6WQ==
+"@cef-ebsi/verifiable-presentation@^1.0.0-rc.9":
+  version "1.0.0-rc.9"
+  resolved "https://registry.yarnpkg.com/@cef-ebsi/verifiable-presentation/-/verifiable-presentation-1.0.0-rc.9.tgz#64531cf15c4f418d7cf808c937d6c6b4f201f4ae"
+  integrity sha512-sIOADNUn41z1OjrG6+pjeTDbPBLrhXDwjcXVrSL538IHrdW5Yj6csvagaGLkkZ6kuThDu7XVEA5LXANJ/iY0JQ==
   dependencies:
-    "@cef-ebsi/did-jwt" "^1.0.0-alpha.5"
-    "@cef-ebsi/verifiable-credential" "^1.0.0-rc.3"
+    "@cef-ebsi/ebsi-did-resolver" "^1.0.0-alpha.3"
+    "@cef-ebsi/verifiable-credential" "^1.0.0-rc.10"
+    axios "^0.23.0"
     canonicalize "^1.0.5"
-    did-resolver "^3.1.0"
-    joi "^17.4.0"
-    js-base64 "^3.6.0"
+    did-jwt "^5.9.0"
+    did-resolver "^3.1.3"
+    joi "^17.4.2"
+    multiformats "^9.4.9"
 
-"@cef-ebsi/wallet-lib@^1.0.0-rc.1":
-  version "1.0.0-rc.2"
-  resolved "https://registry.npmjs.org/@cef-ebsi/wallet-lib/-/wallet-lib-1.0.0-rc.2.tgz"
-  integrity sha512-ICIyAozg7RL1/73kSGaCJDwi79rTc9uGJqh/y+PIaKcE9ygpf6SsZe3xg6MmlbATKvxedQIYjlnuolrl0AV2YQ==
+"@cef-ebsi/wallet-lib@^1.0.0-rc.3":
+  version "1.0.0-rc.3"
+  resolved "https://registry.yarnpkg.com/@cef-ebsi/wallet-lib/-/wallet-lib-1.0.0-rc.3.tgz#2d23a6b9fb882c4a66e491ab56159fd7a922b63d"
+  integrity sha512-1LlIPfkhbvKH0NNR8wYOJQ/1qgSMJj5hsow/NAR/G285cH21M55xlL//i4eknvawfKhNwrpa8+yaoiU8s2fiSw==
   dependencies:
-    "@cef-ebsi/did-jwt" "^1.0.0-alpha.8"
     bn.js "^5.2.0"
+    did-jwt "^5.9.0"
     elliptic "^6.5.4"
     jose "^3.17.0"
     js-sha3 "^0.8.0"
     key-encoder "^2.0.3"
-    multiformats "^9.4.7"
+    multiformats "^9.4.9"
 
 "@ethersproject/abi@5.0.13", "@ethersproject/abi@^5.0.10":
   version "5.0.13"
@@ -1179,6 +1196,13 @@ axios@^0.21.1, axios@^0.21.4:
   dependencies:
     follow-redirects "^1.14.0"
 
+axios@^0.23.0:
+  version "0.23.0"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-0.23.0.tgz#b0fa5d0948a8d1d75e3d5635238b6c4625b05149"
+  integrity sha512-NmvAE4i0YAv5cKq8zlDoPd1VLKAqX5oLuZKs8xkJa4qi6RGn0uhCYFjWtHHC9EM/MwOwYWOs53W+V0aqEXq1sg==
+  dependencies:
+    follow-redirects "^1.14.4"
+
 babel-runtime@6.26.0:
   version "6.26.0"
   resolved "https://registry.npmjs.org/babel-runtime/-/babel-runtime-6.26.0.tgz"
@@ -1208,6 +1232,11 @@ bech32@1.1.4:
   version "1.1.4"
   resolved "https://registry.npmjs.org/bech32/-/bech32-1.1.4.tgz"
   integrity sha512-s0IrSOzLlbvX7yp4WBfPITzpAU8sqQcpsmwXDiKwrG4r491vwCO/XpejasRNl0piBMe/DvP4Tz0mIS/X1DPJBQ==
+
+bech32@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/bech32/-/bech32-2.0.0.tgz#078d3686535075c8c79709f054b1b226a133b355"
+  integrity sha512-LcknSilhIGatDAsY1ak2I8VtGaHNhgMSYVxFrGLXv+xLHytaKZKcaUJJUE7qmBr7h33o5YQwP55pMI0xmkpJwg==
 
 binary-extensions@^2.0.0:
   version "2.2.0"
@@ -1623,10 +1652,33 @@ did-jwt@^5.8.0:
     multiformats "^9.4.8"
     uint8arrays "^3.0.0"
 
+did-jwt@^5.9.0:
+  version "5.11.0"
+  resolved "https://registry.yarnpkg.com/did-jwt/-/did-jwt-5.11.0.tgz#ad332e5d2ebe6858312030091dd195af695284f7"
+  integrity sha512-qIcW7KrLK0/T98nHXGH9ztJD+YdvucGq088cmMZeY/NrAZED/3ebLmy73eTD2B0ollJ2vibylQIGtkQPIN+IBw==
+  dependencies:
+    "@stablelib/ed25519" "^1.0.2"
+    "@stablelib/random" "^1.0.1"
+    "@stablelib/sha256" "^1.0.1"
+    "@stablelib/x25519" "^1.0.1"
+    "@stablelib/xchacha20poly1305" "^1.0.1"
+    bech32 "^2.0.0"
+    canonicalize "^1.0.5"
+    did-resolver "^3.1.1"
+    elliptic "^6.5.4"
+    js-sha3 "^0.8.0"
+    multiformats "^9.4.8"
+    uint8arrays "^3.0.0"
+
 did-resolver@^3.1.0, did-resolver@^3.1.1:
   version "3.1.2"
   resolved "https://registry.npmjs.org/did-resolver/-/did-resolver-3.1.2.tgz"
   integrity sha512-z0F571S95ZKES452sLyFSfUtQrvcW5OgZVCFq7D6gKReonTflgzdD6dcs27HbjUPXwTaXR9lzGFrA3mUd2K6uw==
+
+did-resolver@^3.1.3:
+  version "3.1.3"
+  resolved "https://registry.yarnpkg.com/did-resolver/-/did-resolver-3.1.3.tgz#ed530c9daa2c9925f85e9eabf258e51960db7e70"
+  integrity sha512-ab8y90tSiDkTdfddXRC9Qcb1QSd568aC6+OgFTrcE4rs1vQAZOil+VqXHDu+Ff/UvhxlckPO8oJtp86iICZG0w==
 
 diff@^4.0.1:
   version "4.0.2"
@@ -1995,6 +2047,11 @@ follow-redirects@^1.14.0:
   resolved "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.14.1.tgz"
   integrity sha512-HWqDgT7ZEkqRzBvc2s64vSZ/hfOceEol3ac/7tKwzuvEyWx3/4UegXh5oBOIotkGsObyk3xznnSRVADBgWSQVg==
 
+follow-redirects@^1.14.4:
+  version "1.14.5"
+  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.14.5.tgz#f09a5848981d3c772b5392309778523f8d85c381"
+  integrity sha512-wtphSXy7d4/OR+MvIFbCVBDzZ5520qV8XfPklSN5QtxuMUJZ+b0Wnst1e1lCDocfzuCkHqj8k0FpZqO+UIaKNA==
+
 forwarded@0.2.0:
   version "0.2.0"
   resolved "https://registry.npmjs.org/forwarded/-/forwarded-0.2.0.tgz"
@@ -2294,10 +2351,10 @@ isarray@~1.0.0:
   resolved "https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz"
   integrity sha1-u5NdSFgsuhaMBoNJV6VKPgcSTxE=
 
-joi@^17.4.0:
-  version "17.4.0"
-  resolved "https://registry.npmjs.org/joi/-/joi-17.4.0.tgz"
-  integrity sha512-F4WiW2xaV6wc1jxete70Rw4V/VuMd6IN+a5ilZsxG4uYtUXWu2kq9W5P2dz30e7Gmw8RCbY/u/uk+dMPma9tAg==
+joi@^17.4.2:
+  version "17.4.2"
+  resolved "https://registry.yarnpkg.com/joi/-/joi-17.4.2.tgz#02f4eb5cf88e515e614830239379dcbbe28ce7f7"
+  integrity sha512-Lm56PP+n0+Z2A2rfRvsfWVDXGEWjXxatPopkQ8qQ5mxCEhwHG+Ettgg5o98FFaxilOxozoa14cFhrE/hOzh/Nw==
   dependencies:
     "@hapi/hoek" "^9.0.0"
     "@hapi/topo" "^5.0.0"
@@ -2310,7 +2367,7 @@ jose@^3.12.3, jose@^3.17.0:
   resolved "https://registry.npmjs.org/jose/-/jose-3.20.1.tgz"
   integrity sha512-qAO8uCyyOfkpsAWL4U0O1ug/N8Y4OgYFMvIsvlhU1vcahUcvYkH1MOgN0JIr+XqR9O9A36NwCPju6sPHy8P6jg==
 
-js-base64@^3.6.0, js-base64@^3.6.1:
+js-base64@^3.6.1:
   version "3.6.1"
   resolved "https://registry.npmjs.org/js-base64/-/js-base64-3.6.1.tgz"
   integrity sha512-Frdq2+tRRGLQUIQOgsIGSCd1VePCS2fsddTG5dTCqR0JHgltXWfsxnY0gIXPoMeRmdom6Oyq+UMOFg5suduOjQ==
@@ -2546,10 +2603,15 @@ multer@^1.4.3:
     type-is "^1.6.4"
     xtend "^4.0.0"
 
-multiformats@^9.4.2, multiformats@^9.4.7, multiformats@^9.4.8:
+multiformats@^9.4.2, multiformats@^9.4.8:
   version "9.4.8"
   resolved "https://registry.npmjs.org/multiformats/-/multiformats-9.4.8.tgz"
   integrity sha512-EOJL02/kv+FD5hoItMhKgkYUUruJYMYFq4NQ6YkCh3jVQ5CuHo+OKdHeR50hAxEQmXQ9yvrM9BxLIk42xtfwnQ==
+
+multiformats@^9.4.9:
+  version "9.4.10"
+  resolved "https://registry.yarnpkg.com/multiformats/-/multiformats-9.4.10.tgz#d654d06b28cc066506e4e59b246d65267fb6b93b"
+  integrity sha512-BwWGvgqB/5J/cnWaOA0sXzJ+UGl+kyFAw3Sw1L6TN4oad34C9OpW+GCpYTYPDp4pUaXDC1EjvB3yv9Iodo1EhA==
 
 nan@2.14.0, nan@^2.14.0:
   version "2.14.0"
@@ -3206,6 +3268,11 @@ typedarray@^0.0.6:
   version "0.0.6"
   resolved "https://registry.npmjs.org/typedarray/-/typedarray-0.0.6.tgz"
   integrity sha1-hnrHTjhkGHsdPUfZlqeOxciDB3c=
+
+types@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/types/-/types-0.1.1.tgz#860c6859d11366293f835d8c95aebcf95029838e"
+  integrity sha1-hgxoWdETZik/g12Mla68+VApg44=
 
 typescript@^4.3.2:
   version "4.3.2"
