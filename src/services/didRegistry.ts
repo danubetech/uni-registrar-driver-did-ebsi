@@ -1,15 +1,16 @@
-import { prepareDidDocument, sendApiTransaction, remove0xPrefix } from "../utils/utils";
+import { sendApiTransaction, remove0xPrefix } from "../utils/utils";
 
 import { userOnBoardAuthReq } from "../utils/userOnboarding/userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
+import { JwkKeyFormat, DidRegistrationResponse } from "../utils/types";
+import { buildParams } from "../utils/didRegistryUtils";
 
 export const didRegistry = async (
   token: string,
   didDocument: object,
-  id_token?: string,
   secretKey?: object
-): Promise<{ didState: didRegResponse }> => {
+): Promise<DidRegistrationResponse> => {
   const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
   let client;
   let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
@@ -21,19 +22,22 @@ export const didRegistry = async (
   client.did = did;
   const wallet = await new EbsiWallet(privateKey);
   console.log("did " + did);
-  const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
+  let publicKeyJwk: JwkKeyFormat = await wallet.getPublicKey({ format: "jwk" });
+  publicKeyJwk.kid = did + "#keys-1";
   const key = await EbsiWallet.ec.keyFromPrivate(remove0xPrefix(privateKey));
   let privateKeyJwk;
   privateKeyJwk = await EbsiWallet.formatPrivateKey(key.getPrivate(), {
     format: "jwk",
   });
   console.log("publicKeyJwk....." + JSON.stringify(publicKeyJwk));
-  const idToken =
-    id_token != null
-      ? id_token
-      : await (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
+  const idToken = (await userOnBoardAuthReq(token, did, publicKeyJwk,privateKey)).id_token;
   console.log(idToken);
-  const buildParam = await buildParams(client, didDocument);
+
+  const buildParam = await buildParams({
+    publicKey: [publicKeyJwk],
+    didDoc: didDocument,
+    did: client.did,
+  });
   let param = {
     from: client.address,
     ...buildParam.param,
@@ -54,40 +58,3 @@ export const didRegistry = async (
     },
   };
 };
-
-const buildParams = async (client: any, didDoc: object) => {
-  const controllerDid = client.did;
-  const newDidDocument = await prepareDidDocument(
-    controllerDid,
-    "publicKeyJwk",
-    client.privateKey,
-    didDoc
-  );
-
-  const { didDocument, timestampDataBuffer, didVersionMetadataBuffer } = newDidDocument;
-  console.log(newDidDocument);
-
-  const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
-
-  return {
-    info: {
-      title: "Did document",
-      data: didDocument,
-    },
-    param: {
-      identifier: `0x${Buffer.from(controllerDid).toString("hex")}`,
-      hashAlgorithmId: 1,
-      hashValue: ethers.utils.sha256(didDocumentBuffer),
-      didVersionInfo: `0x${didDocumentBuffer.toString("hex")}`,
-      timestampData: `0x${timestampDataBuffer.toString("hex")}`,
-      didVersionMetadata: `0x${didVersionMetadataBuffer.toString("hex")}`,
-    },
-  };
-};
-
-interface didRegResponse {
-  state: string;
-  identifier: string;
-  secret: object;
-  didDocument: object;
-}

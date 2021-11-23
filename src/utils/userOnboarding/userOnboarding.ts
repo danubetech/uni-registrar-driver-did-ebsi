@@ -1,61 +1,129 @@
 import axios from "axios";
-import { createVP } from "../utils";
+import { signDidAuthInternal } from "../utils";
 import {
-  createAuthenticationResponse,
+  createAuthenticationResponsePayload,
   verifyAuthenticationRequest,
-  siopSession,
 } from "./onboardingUtils";
-
-import { v4 as uuidv4 } from "uuid";
 import querystring from "querystring";
-import { Agent } from "@cef-ebsi/siop-auth";
 import base64url from "base64url";
 const canonicalize = require("canonicalize");
+import { JwkKeyFormat } from "../types";
+import { ES256K } from "../constants";
+import { VerifiablePresentation } from "@cef-ebsi/verifiable-presentation";
+import { VerifiableCredential } from "@cef-ebsi/verifiable-credential";
+import { AuthenticationPayload, AuthResponsePayload, SiopResponse } from "../types";
+import { createVP } from "../utils";
+import { Agent } from "@cef-ebsi/siop-auth";
 
 export const userOnBoardAuthReq = async (
   token: string,
-  client: any,
-  publicKeyJwk: any
+  did: string,
+  publicKeyJwk: JwkKeyFormat,
+  privateKey:any,
 ): Promise<{ id_token: string }> => {
-  let response;
 
-  const nonce = await uuidv4();
   console.log("User onboarding initialted");
-  const didAuthResponseJwt = await createAuthenticationResponse({
-    hexPrivatekey: client.privateKey,
-    did: client.did,
-    nonce,
-    redirectUri: `https://api.preprod.ebsi.eu/users-onboarding/v1/authentication-responses`,
-  });
-  const [url, data] = didAuthResponseJwt.urlEncoded.split("#");
-  console.log(didAuthResponseJwt);
-  response = await axios
-    .post(url, data, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "content-type": "application/x-www-form-urlencoded",
-      },
-    })
-    .catch((error) => {
-      console.log("User Onboarding error");
-      console.error(error.message);
-      throw new Error("Invalid on-boarding token");
-    });
-  const verifiableCredntial = response.data.verifiableCredential;
+  
+  const authReq = await createAuthenticationRequest(did, publicKeyJwk);
+  const authReqObject = authReq.authRequestObject;
+  //("------------------------------------------------------------------------------------------------");
+  // signs payload using internal libraries
+  const jwt = await signDidAuthInternal(did, authReq.payload, privateKey);
+
+  //("------------------------------------------------------------------------------------------------");
+
+  const verifiableCredntial = (await getVerifiableCredential(authReqObject, jwt, token)).verifiableCredential;
 
   console.log(verifiableCredntial);
 
-  const verifiablePresentation = await createVP(
-    client.did,
-    client.privateKey,
-    verifiableCredntial
-  );
+  //("------------------------------------------------------------------------------------------------");
 
+  const verifiablePresentation = await createVP(did, privateKey, verifiableCredntial);
+
+  //("------------------------------------------------------------------------------------------------");
   console.log(verifiablePresentation);
-  const canonicalizedVP = base64url.encode(
-    canonicalize(verifiablePresentation)
+
+  const siopPayloadRequest = await siopPayload(verifiablePresentation, publicKeyJwk, did);
+  const payloadSIOP = siopPayloadRequest.payload;
+  //("------------------------------------------------------------------------------------------------");
+  // signs payload using internal libraries
+  const jwtSIOP = await signDidAuthInternal(did, payloadSIOP, privateKey);
+  const requestObject = siopPayloadRequest.authRequestObject;
+
+  //("------------------------------------------------------------------------------------------------");
+
+
+  const encryptedToken = await getEncryptedToken(requestObject,jwtSIOP);
+
+  const siopAgent = new Agent({
+    privateKey: privateKey.slice(2),
+    didRegistry: "https://api.preprod.ebsi.eu/did-registry/v2/identifiers",
+  });
+  const accessToken = await siopAgent.verifyAuthenticationResponse(
+    encryptedToken.siopResponse.response,
+    encryptedToken.siopResponse.nonce,
   );
 
+  return { id_token: accessToken.toString() };
+};
+
+
+
+const createAuthenticationResponse = async (didAuthResponseCall:any, signedJWT: string) => {
+  if (!didAuthResponseCall || !didAuthResponseCall.did || !didAuthResponseCall.redirectUri)
+    throw new Error("Invalid parmas");
+
+  const params = `id_token=${signedJWT}`;
+  let uriResponse = {
+    urlEncoded: "",
+    bodyEncoded: "",
+    encoding: "application/x-www-form-urlencoded",
+    response_mode: didAuthResponseCall.response_mode
+      ? didAuthResponseCall.response_mode
+      : "fragment", // FRAGMENT is the default
+  };
+
+  if (didAuthResponseCall.response_mode === "form_post") {
+    uriResponse.urlEncoded = encodeURI(didAuthResponseCall.redirectUri);
+    uriResponse.bodyEncoded = encodeURI(params);
+    return uriResponse;
+  }
+
+  if (didAuthResponseCall.response_mode === "query") {
+    uriResponse.urlEncoded = encodeURI(`${didAuthResponseCall.redirectUri}?${params}`);
+    return uriResponse;
+  }
+  uriResponse.response_mode = "fragment";
+  uriResponse.urlEncoded = encodeURI(`${didAuthResponseCall.redirectUri}#${params}`);
+  return uriResponse;
+};
+
+export const getEncryptedToken = async (
+  requestObject: AuthenticationPayload,
+  signedJwt: string
+): Promise<{ siopResponse: SiopResponse }> => {
+  const alg = ES256K;
+  const didAuthJwt = await createAuthenticationResponse(requestObject, signedJwt);
+  console.log(didAuthJwt);
+  const body = didAuthJwt.bodyEncoded;
+  const responseSession = await axios.post(requestObject.redirectUri, body);
+  console.log(responseSession.data);
+  const siopSessionResponse = {
+    alg,
+    nonce: requestObject.nonce,
+    response: responseSession.data,
+  };
+  console.log(siopSessionResponse);
+  return { siopResponse: siopSessionResponse };
+};
+
+export const siopPayload = async (
+  verifiablePresentation: VerifiablePresentation,
+  publicKeyJwk: JwkKeyFormat,
+  did: string
+): Promise<{ payload: AuthResponsePayload; authRequestObject: AuthenticationPayload }> => {
+  console.log(verifiablePresentation);
+  const canonicalizedVP = base64url.encode(canonicalize(verifiablePresentation));
   const siopResponse = await axios.post(
     "https://api.preprod.ebsi.eu/authorisation/v1/authentication-requests",
     {
@@ -63,36 +131,110 @@ export const userOnBoardAuthReq = async (
     }
   );
   console.log(siopResponse.data);
-  const uriDecoded = querystring.decode(
-    siopResponse.data.uri.replace("openid://?", "")
-  ) as {
+  const uriDecoded = querystring.decode(siopResponse.data.uri.replace("openid://?", "")) as {
     client_id: string;
     request: string;
+    nonce: string;
   };
   console.log(uriDecoded);
-  await verifyAuthenticationRequest(
+  const awa = await verifyAuthenticationRequest(
     uriDecoded.request,
     "https://api.preprod.ebsi.eu/did-registry/v2/identifiers"
   );
+  console.log(awa);
 
-  const siopSessionResponse = await siopSession(
-    client,
-    publicKeyJwk,
-    uriDecoded.client_id,
-    canonicalizedVP
+  if (publicKeyJwk == null) throw new Error("Public Key JWK null");
+
+  const reqObj = {
+    did: did,
+    nonce: uriDecoded.nonce,
+    redirectUri: uriDecoded.client_id,
+    response_mode: "form_post",
+    ...(canonicalizedVP && {
+      claims: {
+        verified_claims: canonicalizedVP,
+        encryption_key: publicKeyJwk,
+      },
+    }),
+  };
+  return {
+    payload: await createAuthenticationResponsePayload(reqObj, publicKeyJwk),
+    authRequestObject: reqObj,
+  };
+};
+
+export const getVerifiableCredential = async (
+  authReqObject: AuthenticationPayload,
+  signedJwt: string,
+  token: string
+): Promise<{ verifiableCredential: VerifiableCredential }> => {
+  const didAuthResponseJwt = await createAuthenticationResponse(authReqObject, signedJwt);
+
+  const [url, data] = didAuthResponseJwt.urlEncoded.split("#");
+  console.log(didAuthResponseJwt);
+  const response = await axios
+    .post(url, data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "content-type": "application/x-www-form-urlencoded",
+      },
+    })
+    .catch((error) => {
+      // Handle Error Here
+      console.log("User Onboarding error");
+      console.error(error.message);
+      throw Error("Invalid onboarding token");
+    });
+  const verifiableCredential: VerifiableCredential = response.data.verifiableCredential;
+  console.log(verifiableCredential);
+  return { verifiableCredential: verifiableCredential };
+};
+
+export const createAuthenticationRequest = async (
+  did: string,
+  publicKeyJwk: JwkKeyFormat
+): Promise<{ payload: AuthResponsePayload; authRequestObject: AuthenticationPayload }> => {
+  const onboardRequestUrl =
+    "https://api.preprod.ebsi.eu/users-onboarding/v1/authentication-requests";
+  console.log("Request to user-onboarding-request");
+  console.log("request url " + onboardRequestUrl);
+  const authReq = await axios
+    .post(onboardRequestUrl, {
+      scope: "ebsi users onboarding",
+    })
+    .catch((error) => {
+      console.log("request url failed to " + onboardRequestUrl);
+      console.log(error.message);
+      throw Error("SIOP request failed");
+    });
+  console.log(authReq.status);
+  console.log(authReq.data);
+  const uriAuthDecoded = querystring.decode(
+    authReq.data.session_token.replace("openid://?", "")
+  ) as {
+    client_id: string;
+    request: string;
+    nonce: string;
+  };
+
+  console.log(uriAuthDecoded);
+  const authRequestResponse = await verifyAuthenticationRequest(
+    uriAuthDecoded.request,
+    "https://api.preprod.ebsi.eu/did-registry/v2/identifiers"
   );
-  console.log(siopSessionResponse);
 
-  let accessToken: string;
+  console.log(authRequestResponse);
 
-  const siopAgent = new Agent({
-    privateKey: client.privateKey.slice(2),
-    didRegistry: "https://api.preprod.ebsi.eu/did-registry/v2/identifiers",
-  });
-  accessToken = await siopAgent.verifyAuthenticationResponse(
-    siopSessionResponse.response,
-    siopSessionResponse.nonce
-  );
-  console.log(accessToken);
-  return { id_token: accessToken.toString() };
+  const authReqObject: AuthenticationPayload = {
+    did: did,
+    nonce: uriAuthDecoded.nonce,
+    redirectUri: uriAuthDecoded.client_id,
+    response_mode: "fragment",
+  };
+  console.log(authReqObject);
+
+  return {
+    payload: await createAuthenticationResponsePayload(authReqObject, publicKeyJwk),
+    authRequestObject: authReqObject,
+  };
 };
