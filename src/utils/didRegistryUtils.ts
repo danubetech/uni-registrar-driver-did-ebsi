@@ -1,5 +1,6 @@
 import { prepareDIDRegistryObject, constructDidDoc } from "./utils";
 import { ethers } from "ethers";
+import { buildParamsObject } from "../utils/types";
 
 export const buildParams = async (buildParamsObj: buildParamsObject) => {
   const controllerDid = buildParamsObj.did;
@@ -18,7 +19,7 @@ export const buildParams = async (buildParamsObj: buildParamsObject) => {
     timestampDataBuffer,
     didVersionMetadataBuffer,
   } = newDidDocument;
-  console.log(JSON.stringify(newDidDocument));
+  console.log(JSON.stringify(didDocument,null,2));
   const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
 
   return {
@@ -42,23 +43,7 @@ const prepareDidDocumentWithPublicKey = async (
   publicKey: Array<object>,
   reqDidDoc: object
 ) => {
-  const didDocument = (await constructDidDoc(didUser, [publicKey], reqDidDoc)).didDoc;
+  const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc)).didDoc;
   return await prepareDIDRegistryObject(didDocument);
 };
 
-export interface didRegResponse {
-  jobId?: any;
-  didState: {
-    state: string;
-    identifier?: string;
-    secret?: object;
-    didDocument?: object;
-    payload?: object;
-  };
-}
-
-interface buildParamsObject {
-  didDoc: object;
-  did: string;
-  publicKey: Array<object>;
-}

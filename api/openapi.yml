@@ -1,0 +1,313 @@
+openapi: 3.0.3
+info:
+  title: Universal Registrar Driver
+  description: Universal Registrar Driver
+  contact:
+    email: azeem.ahamed@danubetech.com
+  version: 1.0.0
+servers:
+  - url: /1.0
+paths:
+  /create:
+    post:
+      summary: Creates a DID.
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRequest"
+      responses:
+        "200":
+          description: successfully createed!
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateState"
+        "400":
+          description: invalid input!
+        "500":
+          description: error!
+      x-swagger-router-controller: Default
+  /update:
+    post:
+      summary: Updates a DID.
+      operationId: update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRequest"
+      responses:
+        "200":
+          description: successfully updated!
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateState"
+        "400":
+          description: invalid input!
+        "500":
+          description: error!
+      x-swagger-router-controller: Default
+  /deactivate:
+    post:
+      summary: Deactivates a DID.
+      operationId: deactivate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeactivateRequest"
+      responses:
+        "200":
+          description: successfully deactivated!
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeactivateState"
+        "400":
+          description: invalid input!
+        "500":
+          description: error!
+      x-swagger-router-controller: Default
+components:
+  schemas:
+    CreateRequest:
+      type: object
+      properties:
+        jobId:
+          type: string
+          nullable: true
+          example: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
+        identifier:
+          type: string
+          example: did:ebsi:EDg2YxkZZ5kDrUnyoGwuNQyAqJLcoMx5ND6eMgddZojm
+        options:
+          type: object
+        secret:
+          allOf:
+            - $ref: "#/components/schemas/OptionsWithToken"
+        didDocument:
+          type: object
+      additionalProperties: false
+
+      description: Request parameters for the create operation.
+    UpdateRequest:
+      required:
+        - identifier
+      type: object
+      properties:
+        jobId:
+          type: string
+          nullable: true
+          example: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
+        identifier:
+          type: string
+          example: did:ebsi:EDg2YxkZZ5kDrUnyoGwuNQyAqJLcoMx5ND6eMgddZojm
+        options:
+          type: object
+        secret:
+          allOf:
+            - $ref: "#/components/schemas/OptionsWithToken"
+            - $ref: "#/components/schemas/PrivateKeyJWK"
+        didDocument:
+          type: object
+      additionalProperties: false
+      description: Request parameters for the update operation.
+    DeactivateRequest:
+      required:
+        - identifier
+      type: object
+      properties:
+        jobId:
+          type: string
+          example: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
+        identifier:
+          type: string
+          example: did:ebsi:EDg2YxkZZ5kDrUnyoGwuNQyAqJLcoMx5ND6eMgddZojm
+        options:
+          type: object
+        secret:
+          type: object
+      additionalProperties: false
+      description: Request parameters for the deactivate operation.
+    CreateState:
+      required:
+        - didState
+      type: object
+      properties:
+        jobId:
+          type: string
+          example: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
+        didState:
+          $ref: "#/components/schemas/CreateState_didState"
+        registrarMetadata:
+          type: object
+        methodMetadata:
+          type: object
+      additionalProperties: false
+      description: The state after a create operation.
+      example:
+        jobId: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
+        didState:
+          state: finished
+          identifier: did:ebsi:HhQjFiWzdfyqPDSHLJBKTD4h6GhKBwdvq4FoL4aaMWxj
+          secret:
+            keys:
+              - kty: EC
+                crv: secp256k1
+                x: UlSHznbHyPownkOGfOxBB4zmsYsCg_xt9hMYr6ArkhI
+                'y': 2hYVHiXojLDTJrqJAHLojTx7MZU1xEwbyC3TO5xHLS8
+                d: 1A7DiGax8wzD0gDFOQCwoTeVDrHrWwSa5kW8wzBTGw4
+                kid: did:ebsi:HhQjFiWzdfyqPDSHLJBKTD4h6GhKBwdvq4FoL4aaMWxj#keys-1
+          didDocument:
+            '@context':
+              - https://www.w3.org/ns/did/v1
+              - https://w3id.org/security/suites/secp256k1-2019/v1
+            id: did:ebsi:HhQjFiWzdfyqPDSHLJBKTD4h6GhKBwdvq4FoL4aaMWxj
+            verificationMethod:
+              - id: did:ebsi:HhQjFiWzdfyqPDSHLJBKTD4h6GhKBwdvq4FoL4aaMWxj#keys-1
+                type: EcdsaSecp256k1VerificationKey2019
+                controller: did:ebsi:HhQjFiWzdfyqPDSHLJBKTD4h6GhKBwdvq4FoL4aaMWxj
+                publicKeyJwk:
+                  kty: EC
+                  crv: secp256k1
+                  x: UlSHznbHyPownkOGfOxBB4zmsYsCg_xt9hMYr6ArkhI
+                  'y': 2hYVHiXojLDTJrqJAHLojTx7MZU1xEwbyC3TO5xHLS8
+            authentication:
+              - did:ebsi:HhQjFiWzdfyqPDSHLJBKTD4h6GhKBwdvq4FoL4aaMWxj#keys-1
+            assertionMethod:
+              - did:ebsi:HhQjFiWzdfyqPDSHLJBKTD4h6GhKBwdvq4FoL4aaMWxj#keys-1
+        
+        methodMetadata: {}
+        registrarMetadata: {}
+    UpdateState:
+      required:
+        - didState
+      type: object
+      properties:
+        jobId:
+          type: string
+          example: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
+        didState:
+          $ref: "#/components/schemas/UpdateState_didState"
+        registrarMetadata:
+          type: object
+        methodMetadata:
+          type: object
+      additionalProperties: false
+      description: The state after an update operation.
+      example:
+        jobId: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
+        didState:
+          state: state
+          secret: {}
+        methodMetadata: {}
+        registrarMetadata: {}
+    DeactivateState:
+      required:
+        - didState
+      type: object
+      properties:
+        jobId:
+          type: string
+          example: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
+        didState:
+          $ref: "#/components/schemas/DeactivateState_didState"
+        registrarMetadata:
+          type: object
+        methodMetadata:
+          type: object
+      additionalProperties: false
+      description: The state after a deactivate operation.
+      example:
+        jobId: 6d85bcd0-2ea3-4288-ab00-15afadd8a156
+        didState:
+          state: state
+        methodMetadata: {}
+        registrarMetadata: {}
+    CreateState_didState:
+      type: object
+      properties:
+        state:
+          type: string
+          example: finished
+        identifier:
+          type: string
+          example: did:ebsi:HhQjFiWzdfyqPDSHLJBKTD4h6GhKBwdvq4FoL4aaMWxj
+        secret:
+          type: object
+          example:
+            keys:
+              - $ref: "#/components/schemas/PrivateKeyJWK"
+      example:
+        identifier: did:sov:WRfXPg8dantKVubE3HX8pw
+        state: finished
+        secret:
+          seed: 72WGp7NgFR1Oqdi8zlt7jQQ434XR0cNQ
+          keys:
+            - kty: EC
+              crv: secp256k1
+              x: UlSHznbHyPownkOGfOxBB4zmsYsCg_xt9hMYr6ArkhI
+              'y': 2hYVHiXojLDTJrqJAHLojTx7MZU1xEwbyC3TO5xHLS8
+              d: 1A7DiGax8wzD0gDFOQCwoTeVDrHrWwSa5kW8wzBTGw4
+              kid: did:ebsi:HhQjFiWzdfyqPDSHLJBKTD4h6GhKBwdvq4FoL4aaMWxj#keys-1
+    UpdateState_didState:
+      type: object
+      properties:
+        state:
+          type: string
+        secret:
+          type: object
+      example:
+        state: state
+        secret: {}
+    DeactivateState_didState:
+      type: object
+      properties:
+        state:
+          type: string
+      example:
+        state: state
+    PrivateKeyJWK:
+      oneOf:
+        - type: string
+        - type: object
+    PrivateKeyObject:
+      type: object
+      properties:
+        kty:
+          type: string
+          example: EC
+        crv: 
+          type: string
+          example: secp256k1
+        x: 
+          type: string
+          example:  ekFoi__ctlWRUdG2OWNfkpJedEortngauFTy9njv_mQ
+        y: 
+          type: string
+          example:  HwxZU4J1dJcIwKd8-ZacE5h5tCs9r6OHTFwk2W3KN2I
+        d: 
+          type: string
+          example:  eBj3J7jBwN7UcCnNjlbUNT6q49WOso8AHH_1W4kf_es
+        kid: 
+          type: string
+          example:  did:ebsi:EDg2YxkZZ5kDrUnyoGwuNQyAqJLcoMx5ND6eMgddZojm#keys-1
+    OptionsWithToken:
+      type: object
+      properties:
+        token:
+          $ref: "#/components/schemas/Token"
+    OptionsWithIdToken:
+      type: object
+      properties:
+        token:
+          $ref: "#/components/schemas/Id_Token"
+    Token:
+      type: string
+      example: eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjE2MzE2MTk0MTUsImlhdCI6MTYzMTYxODUxNSwiaXNzIjoiZGlkOmVic2k6NGpQeGNpZ3ZmaWZaeVZ3eW01emp4YUtYR0pUdDdZd0Z0cGc2QVh0c1I0ZDUiLCJvbmJvYXJkaW5nIjoicmVjYXB0Y2hhIiwidmFsaWRhdGVkSW5mbyI6eyJhY3Rpb24iOiJsb2dpbiIsImNoYWxsZW5nZV90cyI6IjIwMjEtMDktMTRUMTE6MjE6NTRaIiwiaG9zdG5hbWUiOiJhcHAucHJlcHJvZC5lYnNpLmV1Iiwic2NvcmUiOjAuOSwic3VjY2VzcyI6dHJ1ZX19.jdFx-9Cnh4t7rKcfL_c6wgKL-HKXfSydFP07l8uK70JHvls1kgtnFLeisV_PgSWHPMkxbdlMagx_9Qv5NQa-FA
+    Id_Token:
+      type: string
+      example: eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NksiLCJraWQiOiJodHRwczovL2FwaS5wcmVwcm9kLmVic2kuZXUvdHJ1c3RlZC1hcHBzLXJlZ2lzdHJ5L3YyL2FwcHMvMHgwOGMyNTg1NmZiY2JkZDA3NmM5YzM5NTEyYWJlZjYzMDk3NDk5MTBhMTEwZDlkMWE5YzlhN2QyYjI3N2I2ZDIwIn0.eyJpYXQiOjE2MzE3MTM2MDIsImV4cCI6MTYzMTcxNDUwMiwic3ViIjoiZGlkOmVic2k6RURnMll4a1paNWtEclVueW9Hd3VOUXlBcUpMY29NeDVORDZlTWdkZFpvam0iLCJhdWQiOiJlYnNpLWNvcmUtc2VydmljZXMiLCJub25jZSI6IjAwMTQxNTBkLWEwNTUtNDFmYS1hMjM3LTYyZTBkMjQ3ODlkNiIsImxvZ2luX2hpbnQiOiJkaWRfc2lvcCIsImlzcyI6ImRpZDplYnNpOkhDOXRtaWl0VzRTOWZZQWFqNlJZc29xYlQzczdUY3d5aHlyc2JTaXpuc2RaIn0.cJEJMQy9KYLIsMIxSR4meLlwhpZLc4368FGwIp8j3PnUywDdUNFwKMgZXyYHavLUq1clEjUJ66fRa_IixF7N7Q

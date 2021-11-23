@@ -9,7 +9,7 @@ export type JwkKeyFormat = {
 
 export type AuthenticationPayload = {
   did: string;
-  nonce: unknown;
+  nonce: string;
   redirectUri: string;
   response_mode: string;
   claims?: unknown;
@@ -40,6 +40,12 @@ export type DidRegistrationResponse = {
   };
 };
 
+export type SiopResponse = {
+  alg:string;
+  nonce: string;
+  response: any;
+};
+
 type SigningPayload = {
   payload: unknown;
   did?:string,
@@ -48,3 +54,9 @@ type SigningPayload = {
   typ?: string;
   issuer?: string;
 };
+
+export interface buildParamsObject {
+  didDoc: object;
+  did: string;
+  publicKey: Array<object>;
+}

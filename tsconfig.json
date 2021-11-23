@@ -1,15 +1,15 @@
 {
   "extends": "@tsconfig/node14/tsconfig.json",
-    "compilerOptions": {
-      "target": "es6",
-      "module": "commonjs",
-      "rootDir": "./",
-      "outDir": "./build",
-      "noImplicitAny": false,
-      "esModuleInterop": true,
-      "strict": false,
-      "declaration": false,
-      "resolveJsonModule": true,
-      "allowSyntheticDefaultImports": true,
-    }
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "rootDir": "./",
+    "outDir": "./build",
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "strict": false,
+    "declaration": false,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
   }
+}

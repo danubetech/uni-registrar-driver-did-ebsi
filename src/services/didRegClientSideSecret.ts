@@ -1,15 +1,20 @@
-import { jsonrpcBody, paramSignedTransaction } from "./utils/utils";
-import {  buildParams } from "./utils/didRegistryUtils";
+import { jsonrpcBody, paramSignedTransaction } from "../utils/utils";
+import {  buildParams } from "../utils/didRegistryUtils";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
-import { step1, step2, step3, step4, } from "./userOnboardingClientSideSecretMode"
-import { DidRegistrationResponse } from "./utils/types";
+import {
+  createAuthenticationRequest,
+  getVerifiableCredential,
+  siopPayload,
+  getEncryptedToken,
+} from "../utils/userOnboarding/userOnboarding";
+import { DidRegistrationResponse } from "../utils/types";
 import { Base64 } from "js-base64";
 import {
   OIDC_ISSUE,
   ES256K,
-} from "./types";
+} from "../utils/constants";
 const elliptic = require("elliptic");
 const Web3 = require("web3");
 
@@ -47,7 +52,7 @@ export const didRegistryClientSideSecret = async (
         y: Base64.fromUint8Array(keyPair.getPublic().getY().toArrayLike(Buffer), true),
       };
       console.log(jwkPK);
-      const req1 = await step1(did, jwkPK);
+      const req1 = await createAuthenticationRequest(did, jwkPK);
       console.log(req1);
       let job_Id = uuidv4();
       const objectStore = {
@@ -83,7 +88,11 @@ export const didRegistryClientSideSecret = async (
       if (objectMap1 == null) throw new Error("Invalid JobId");
       console.log(objectMap1.did);
       console.log(objectMap1.token);
-      const req2 = await step2(objectMap1.authReqPayload, options.signedPayload, objectMap1.token);
+      const req2 = await getVerifiableCredential(
+        objectMap1.authReqPayload,
+        options.signedPayload,
+        objectMap1.token
+      );
 
       const objectStore1 = {
         did: objectMap1.did,
@@ -118,7 +127,11 @@ export const didRegistryClientSideSecret = async (
       const objectMap2 = map.get(jobID);
       if (objectMap2 == null) throw new Error("Invalid JobId");
       console.log(options.signedPayload);
-      const req3 = await step3(options.signedPayload, objectMap2.publicKeyJwk, objectMap2.did);
+      const req3 = await siopPayload(
+        options.signedPayload,
+        objectMap2.publicKeyJwk,
+        objectMap2.did
+      );
 
       const objectStore2 = {
         did: objectMap2.did,
@@ -154,7 +167,7 @@ export const didRegistryClientSideSecret = async (
       console.log(currentState);
       const objectMap3 = map.get(jobID);
       if (objectMap3 == null) throw new Error("Invalid JobId");
-      const req4 = await step4(objectMap3.authReqPayload, options.signedPayload);
+      const req4 = await getEncryptedToken(objectMap3.authReqPayload, options.signedPayload);
 
       const objectStore3 = {
         did: objectMap3.did,
@@ -191,7 +204,7 @@ export const didRegistryClientSideSecret = async (
 
       const buildParam = await buildParams({
         did: objectMap4.did,
-        publicKey: objectMap4.publicKeyJwk,
+        publicKey: [objectMap4.publicKeyJwk],
         didDoc: objectMap4.didDocument,
       });
       let param = {
@@ -242,7 +255,6 @@ export const didRegistryClientSideSecret = async (
       // remove jobId after completion
       map.delete(jobID);
       return {
-        jobId: null,
         didState: {
           state: "finished",
           identifier: objectMap5.did,
@@ -254,7 +266,7 @@ export const didRegistryClientSideSecret = async (
   }
 };
 
-const constructUnsignedTx = async (token, url, method, param) => {
+const constructUnsignedTx = async (token:string, url:string, method:string, param:any) => {
   const body = jsonrpcBody(method, [param]);
   console.log(JSON.stringify(param));
   let response;
@@ -275,7 +287,7 @@ const constructUnsignedTx = async (token, url, method, param) => {
   return uTx;
 };
 
-const constructSignedTx = async (token, url, signedTx, unSignedTx) => {
+const constructSignedTx = async (token:string, url:string, signedTx:any, unSignedTx:any) => {
   const bodySend = jsonrpcBody("signedTransaction", [paramSignedTransaction(unSignedTx, signedTx)]);
   console.log(signedTx);
   console.log(unSignedTx);

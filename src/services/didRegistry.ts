@@ -1,22 +1,22 @@
-import { sendApiTransaction, remove0xPrefix } from "./utils/utils";
-import { buildParams, didRegResponse } from "./utils/didRegistryUtils";
-import { userOnBoardAuthReq } from "./userOnboarding";
+import { sendApiTransaction, remove0xPrefix } from "../utils/utils";
+
+import { userOnBoardAuthReq } from "../utils/userOnboarding/userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
-import { JwkKeyFormat } from "./utils/types";
+import { JwkKeyFormat, DidRegistrationResponse } from "../utils/types";
+import { buildParams } from "../utils/didRegistryUtils";
 
 export const didRegistry = async (
   token: string,
-  id_token: string,
   didDocument: object,
   secretKey?: object
-): Promise<didRegResponse> => {
+): Promise<DidRegistrationResponse> => {
   const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
   let client;
-
   let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
   if (secretKey != null && buffer == null) throw new Error("Unsupported key format");
   const privateKey = buffer != null ? buffer.toString("hex") : "0x" + keyPairs.privateKey;
+
   client = new ethers.Wallet(privateKey);
   const did = await EbsiWallet.createDid();
   client.did = did;
@@ -30,9 +30,9 @@ export const didRegistry = async (
     format: "jwk",
   });
   console.log("publicKeyJwk....." + JSON.stringify(publicKeyJwk));
-  const idToken = (await userOnBoardAuthReq(token, client, publicKeyJwk)).id_token;
+  const idToken = (await userOnBoardAuthReq(token, did, publicKeyJwk,privateKey)).id_token;
   console.log(idToken);
-  
+
   const buildParam = await buildParams({
     publicKey: [publicKeyJwk],
     didDoc: didDocument,
