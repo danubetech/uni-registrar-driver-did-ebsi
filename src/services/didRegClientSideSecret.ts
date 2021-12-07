@@ -295,14 +295,15 @@ export const didRegistryClientSideSecret = async (
         ...buildParam.param,
       };
       didDoc = buildParam.info.data;
-      const unsignedTxs = await constructUnsignedTx(token, url, "insertDidDocument", param);
+      const sessionToken = options.signedPayload; 
+      const unsignedTxs = await constructUnsignedTx(sessionToken, url, "insertDidDocument", param);
       const serializedPayload = await serializeTx(unsignedTxs.formatedUnsignedTx);
 
       const objectStore4 = {
         did: objectMap.did,
         didDocument: didDoc,
         unSignedTx: unsignedTxs.unsignedTx,
-        token: token,
+        token: sessionToken,
         authReqPayload: null,
         publicKeyJwk: objectMap.publicKeyJwk,
         clientAddress: objectMap.clientAddress,
