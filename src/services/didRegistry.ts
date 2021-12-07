@@ -5,32 +5,35 @@ import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
 import { JwkKeyFormat, DidRegistrationResponse } from "../utils/types";
 import { buildParams } from "../utils/didRegistryUtils";
+import { DIDDocument } from "../utils/types";
 
 export const didRegistry = async (
   token: string,
-  didDocument: object,
+  didDocument: DIDDocument,
   secretKey?: object
 ): Promise<DidRegistrationResponse> => {
+  
   const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
   let client;
   let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
+  
   if (secretKey != null && buffer == null) throw new Error("Unsupported key format");
   const privateKey = buffer != null ? buffer.toString("hex") : "0x" + keyPairs.privateKey;
 
   client = new ethers.Wallet(privateKey);
-  const did = await EbsiWallet.createDid();
+  const did = EbsiWallet.createDid();
   client.did = did;
-  const wallet = await new EbsiWallet(privateKey);
+  const wallet = new EbsiWallet(privateKey);
   console.log("did " + did);
+  
   let publicKeyJwk: JwkKeyFormat = await wallet.getPublicKey({ format: "jwk" });
   publicKeyJwk.kid = did + "#keys-1";
   const key = await EbsiWallet.ec.keyFromPrivate(remove0xPrefix(privateKey));
-  let privateKeyJwk;
-  privateKeyJwk = await EbsiWallet.formatPrivateKey(key.getPrivate(), {
+  const privateKeyJwk = await EbsiWallet.formatPrivateKey(key.getPrivate(), {
     format: "jwk",
   });
   console.log("publicKeyJwk....." + JSON.stringify(publicKeyJwk));
-  const idToken = (await userOnBoardAuthReq(token, did, publicKeyJwk,privateKey)).id_token;
+  const idToken = (await userOnBoardAuthReq(token, did, publicKeyJwk, privateKey)).id_token;
   console.log(idToken);
 
   const buildParam = await buildParams({
@@ -47,8 +50,20 @@ export const didRegistry = async (
     console.log(buildParam.info.title);
     console.log(buildParam.info.data);
   });
-  privateKeyJwk["kid"] = did + "#keys-1";
-  const keyObj = { keys: [privateKeyJwk] };
+  const keyObj = {
+    verificationMethod: [
+      {
+        id: did + "#keys-1",
+        type: "JsonWebKey2020",
+        controller: did,
+        purpose: [
+          "authentication",
+          "assertionMethod"
+        ],
+        privateKeyJwk: privateKeyJwk,
+      },
+    ],
+  };
   return {
     didState: {
       state: "finished",

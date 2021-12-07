@@ -16,6 +16,7 @@ import buffer_1 from "buffer";
 import { createVerifiablePresentation, VerifiablePresentation } from "@cef-ebsi/verifiable-presentation";
 import crypto from "crypto";
 import { VerifiableCredential } from "@cef-ebsi/verifiable-credential";
+import { UnsignedTX, DIDDocument } from "../utils/types";
 
 export const signDidAuthInternal = async (did:string, payload:any, hexPrivateKey:string):Promise<string> => {
   // check hexPrivateKey is valid
@@ -81,7 +82,7 @@ export const createVP = async (did:string, privateKey:string, vc:VerifiableCrede
   return createVerifiablePresentation(presentation, requiredProof, signatureValue, options);
 };
 
-const extractIatFromJwt = (jwt:string) => {
+export const extractIatFromJwt = (jwt:string) => {
   const token = jwt.split(".");
   const payload = base64url.decode(token[1]);
   return JSON.parse(payload).iat;
@@ -176,8 +177,6 @@ const verificationMethod = (didUser: string, publicKey: Array<object>) => {
       publicKeyJwk: publicKey[i] ,
     });
   }
-  console.log("Verification method")
-  console.log(verificationMethodObject);
   return verificationMethodObject;
 };
 
@@ -221,7 +220,7 @@ export const jsonrpcBody = (method:string, params:any) => {
   };
 };
 
-const formatEthersUnsignedTransaction = (unsignedTransaction) => {
+const formatEthersUnsignedTransaction = (unsignedTransaction: UnsignedTX): UnsignedTX => {
   return {
     to: unsignedTransaction.to,
     data: unsignedTransaction.data,
@@ -233,7 +232,7 @@ const formatEthersUnsignedTransaction = (unsignedTransaction) => {
   };
 };
 
-export const paramSignedTransaction = (tx, sgnTx) => {
+export const paramSignedTransaction = (tx: UnsignedTX, sgnTx) => {
   const { r, s, v } = ethers.utils.parseTransaction(sgnTx);
   return {
     protocol: "eth",
@@ -245,7 +244,7 @@ export const paramSignedTransaction = (tx, sgnTx) => {
   };
 };
 
-export const resolveDid = async (did: string): Promise<{ didDocument: object }> => {
+export const resolveDid = async (did: string): Promise<{ didDocument: DIDDocument }> => {
   const url = "https://api.preprod.ebsi.eu/did-registry/v2/identifiers/";
   const encodedDid = "did%3Aebsi%3A" + did.split(":")[2];
   console.log(`${url + encodedDid}`);
@@ -272,7 +271,7 @@ export const base64ToBase64Url = (privateKey) => {
     .replace(/=/g, "");
 };
 
-export const getLedgerTx = async (txId:string, token:string) => {
+const getLedgerTx = async (txId:string, token:string) => {
   const url = `https://api.preprod.ebsi.eu/ledger/v2/blockchains/besu`;
   const body = jsonrpcBody("eth_getTransactionReceipt", txId);
   const response = await axios.post(url, body, {

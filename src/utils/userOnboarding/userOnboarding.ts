@@ -1,5 +1,4 @@
 import axios from "axios";
-import { signDidAuthInternal } from "../utils";
 import {
   createAuthenticationResponsePayload,
   verifyAuthenticationRequest,
@@ -8,12 +7,17 @@ import querystring from "querystring";
 import base64url from "base64url";
 const canonicalize = require("canonicalize");
 import { JwkKeyFormat } from "../types";
-import { ES256K } from "../constants";
-import { VerifiablePresentation } from "@cef-ebsi/verifiable-presentation";
+import { ES256K, OIDC_ISSUE } from "../constants";
+import {
+  VerifiablePresentation,
+  createVerifiablePresentation,
+} from "@cef-ebsi/verifiable-presentation";
 import { VerifiableCredential } from "@cef-ebsi/verifiable-credential";
 import { AuthenticationPayload, AuthResponsePayload, SiopResponse } from "../types";
-import { createVP } from "../utils";
 import { Agent } from "@cef-ebsi/siop-auth";
+import { prepareJWSPayload, signJWS } from "../signingUtils"
+import { ES256KSigner } from "@cef-ebsi/did-jwt";
+import { extractIatFromJwt } from "../utils";
 
 export const userOnBoardAuthReq = async (
   token: string,
@@ -22,13 +26,28 @@ export const userOnBoardAuthReq = async (
   privateKey:any,
 ): Promise<{ id_token: string }> => {
 
-  console.log("User onboarding initialted");
+  console.log("User onboarding initiated");
   
   const authReq = await createAuthenticationRequest(did, publicKeyJwk);
   const authReqObject = authReq.authRequestObject;
   //("------------------------------------------------------------------------------------------------");
   // signs payload using internal libraries
-  const jwt = await signDidAuthInternal(did, authReq.payload, privateKey);
+  //const jwt = await signDidAuthInternal(did, authReq.payload, privateKey);
+  let signingPayload = await prepareJWSPayload(
+    { ...authReq.payload },
+    {
+      issuer: OIDC_ISSUE,
+      alg: ES256K,
+      expiresIn: 5 * 60,
+    },
+    {
+      alg: ES256K,
+      typ: "JWT",
+      kid:  `${did}#key-1`,
+    }
+  );
+  const signature = await signJWS(signingPayload, ES256K, ES256KSigner(privateKey.replace("0x", "")));
+  const jwt = [signingPayload, signature].join(".");
 
   //("------------------------------------------------------------------------------------------------");
 
@@ -38,7 +57,52 @@ export const userOnBoardAuthReq = async (
 
   //("------------------------------------------------------------------------------------------------");
 
-  const verifiablePresentation = await createVP(did, privateKey, verifiableCredntial);
+  //const verifiablePresentation = await createVP(did, privateKey, verifiableCredntial);
+
+  const options = {
+    resolver: `https://api.preprod.ebsi.eu/did-registry/v2/identifiers`,
+    tirUrl: `https://api.preprod.ebsi.eu/trusted-issuers-registry/v2/issuers`,
+  };
+  const requiredProof = {
+    type: "EcdsaSecp256k1Signature2019",
+    proofPurpose: "assertionMethod",
+    verificationMethod: `${did}#keys-1`,
+  };
+  const presentation = {
+    "@context": ["https://www.w3.org/2018/credentials/v1"],
+    type: "VerifiablePresentation",
+    verifiableCredential: [verifiableCredntial],
+    holder: did,
+  };
+  // this payload goes to client
+
+  const vpPayload = await prepareJWSPayload(
+    presentation,
+    {
+      alg: "ES256K",
+      issuer: did,
+      canonicalize: true,
+    },
+    {
+      alg: "ES256K",
+      typ: "JWT",
+      kid: `${options.resolver}/${did}#keys-1`,
+    }
+  );
+
+  const signatureVP = await signJWS(vpPayload, ES256K, ES256KSigner(privateKey.replace("0x", "")));
+
+  // signature is response from driver
+  const jwtVP = [vpPayload, signatureVP].join(".");
+  //const vpToken = jwtVP.split(".");
+
+  const signatureValue = {
+    proofValue: `${jwtVP}`,
+    proofValueName: "jws",
+    iat: extractIatFromJwt(jwtVP),
+  };
+
+  const verifiablePresentation = await createVerifiablePresentation(presentation, requiredProof, signatureValue, options);
 
   //("------------------------------------------------------------------------------------------------");
   console.log(verifiablePresentation);
@@ -47,8 +111,28 @@ export const userOnBoardAuthReq = async (
   const payloadSIOP = siopPayloadRequest.payload;
   //("------------------------------------------------------------------------------------------------");
   // signs payload using internal libraries
-  const jwtSIOP = await signDidAuthInternal(did, payloadSIOP, privateKey);
+  //const jwtSIOP = await signDidAuthInternal(did, payloadSIOP, privateKey);
   const requestObject = siopPayloadRequest.authRequestObject;
+
+  let signingPayloadSIOP = await prepareJWSPayload(
+    { ...payloadSIOP },
+    {
+      issuer: OIDC_ISSUE,
+      alg: ES256K,
+      expiresIn: 5 * 60,
+    },
+    {
+      alg: ES256K,
+      typ: "JWT",
+      kid: `${did}#key-1`,
+    }
+  );
+  const signatureSIOP = await signJWS(
+    signingPayloadSIOP,
+    ES256K,
+    ES256KSigner(privateKey.replace("0x", ""))
+  );
+  const jwtSIOP = [signingPayloadSIOP, signatureSIOP].join(".");
 
   //("------------------------------------------------------------------------------------------------");
 
@@ -72,7 +156,6 @@ export const userOnBoardAuthReq = async (
 const createAuthenticationResponse = async (didAuthResponseCall:any, signedJWT: string) => {
   if (!didAuthResponseCall || !didAuthResponseCall.did || !didAuthResponseCall.redirectUri)
     throw new Error("Invalid parmas");
-
   const params = `id_token=${signedJWT}`;
   let uriResponse = {
     urlEncoded: "",
@@ -104,7 +187,6 @@ export const getEncryptedToken = async (
 ): Promise<{ siopResponse: SiopResponse }> => {
   const alg = ES256K;
   const didAuthJwt = await createAuthenticationResponse(requestObject, signedJwt);
-  console.log(didAuthJwt);
   const body = didAuthJwt.bodyEncoded;
   const responseSession = await axios.post(requestObject.redirectUri, body);
   console.log(responseSession.data);
@@ -122,7 +204,6 @@ export const siopPayload = async (
   publicKeyJwk: JwkKeyFormat,
   did: string
 ): Promise<{ payload: AuthResponsePayload; authRequestObject: AuthenticationPayload }> => {
-  console.log(verifiablePresentation);
   const canonicalizedVP = base64url.encode(canonicalize(verifiablePresentation));
   const siopResponse = await axios.post(
     "https://api.preprod.ebsi.eu/authorisation/v1/authentication-requests",
@@ -141,7 +222,6 @@ export const siopPayload = async (
     uriDecoded.request,
     "https://api.preprod.ebsi.eu/did-registry/v2/identifiers"
   );
-  console.log(awa);
 
   if (publicKeyJwk == null) throw new Error("Public Key JWK null");
 
@@ -171,7 +251,6 @@ export const getVerifiableCredential = async (
   const didAuthResponseJwt = await createAuthenticationResponse(authReqObject, signedJwt);
 
   const [url, data] = didAuthResponseJwt.urlEncoded.split("#");
-  console.log(didAuthResponseJwt);
   const response = await axios
     .post(url, data, {
       headers: {
@@ -208,7 +287,6 @@ export const createAuthenticationRequest = async (
       throw Error("SIOP request failed");
     });
   console.log(authReq.status);
-  console.log(authReq.data);
   const uriAuthDecoded = querystring.decode(
     authReq.data.session_token.replace("openid://?", "")
   ) as {
@@ -218,12 +296,10 @@ export const createAuthenticationRequest = async (
   };
 
   console.log(uriAuthDecoded);
-  const authRequestResponse = await verifyAuthenticationRequest(
+  await verifyAuthenticationRequest(
     uriAuthDecoded.request,
     "https://api.preprod.ebsi.eu/did-registry/v2/identifiers"
   );
-
-  console.log(authRequestResponse);
 
   const authReqObject: AuthenticationPayload = {
     did: did,
@@ -231,7 +307,6 @@ export const createAuthenticationRequest = async (
     redirectUri: uriAuthDecoded.client_id,
     response_mode: "fragment",
   };
-  console.log(authReqObject);
 
   return {
     payload: await createAuthenticationResponsePayload(authReqObject, publicKeyJwk),

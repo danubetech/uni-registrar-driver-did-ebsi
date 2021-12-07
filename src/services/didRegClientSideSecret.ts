@@ -1,5 +1,5 @@
-import { jsonrpcBody, paramSignedTransaction } from "../utils/utils";
-import {  buildParams } from "../utils/didRegistryUtils";
+import { jsonrpcBody, paramSignedTransaction, extractIatFromJwt } from "../utils/utils";
+import { buildParams } from "../utils/didRegistryUtils";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
@@ -9,37 +9,45 @@ import {
   siopPayload,
   getEncryptedToken,
 } from "../utils/userOnboarding/userOnboarding";
-import { DidRegistrationResponse } from "../utils/types";
+import { DidRegistrationResponse, UnsignedTX } from "../utils/types";
 import { Base64 } from "js-base64";
-import {
-  OIDC_ISSUE,
-  ES256K,
-} from "../utils/constants";
+import { OIDC_ISSUE, ES256K } from "../utils/constants";
 const elliptic = require("elliptic");
 const Web3 = require("web3");
+import { prepareJWSPayload, serializeTx, signedTransactionSignature, sha256 } from "../utils/signingUtils";
+import { DIDDocument } from "../utils/types";
+
+import { createVerifiablePresentation } from "@cef-ebsi/verifiable-presentation";
 
 let didDoc;
-let unSigned;
 
 let map = new Map();
+let objectMap;
 
 export const didRegistryClientSideSecret = async (
-  options:any,
+  options: any,
   token: string,
-  didDocument: object,
-  jobID?: any,
+  didDocument: DIDDocument,
+  jobID?: any
 ): Promise<DidRegistrationResponse> => {
-  let currentState = options.action == null ? "initial" : options.action;
-  
+  let currentState = "initial";
+
   const url = `https://api.preprod.ebsi.eu/did-registry/v2/jsonrpc`;
   const ec = new elliptic.ec("secp256k1");
   const web3 = new Web3();
+
+  if (jobID != null) {
+    console.log(jobID);
+    objectMap = map.get(jobID);
+    console.log(map);
+    currentState = objectMap.currentState;
+  }
 
   switch (currentState) {
     case "initial":
       console.log(currentState);
       const did = EbsiWallet.createDid();
-      let keyPair =await  ec.keyFromPublic(options.publicKey, "hex");
+      let keyPair = await ec.keyFromPublic(options.publicKey, "hex");
       let pubkey = "0x" + keyPair.getPublic(false, "hex").substr(2);
       let adr = "0x".concat(
         web3.utils.keccak256(pubkey).substr(web3.utils.keccak256(pubkey).length - 40)
@@ -53,7 +61,19 @@ export const didRegistryClientSideSecret = async (
       };
       console.log(jwkPK);
       const req1 = await createAuthenticationRequest(did, jwkPK);
-      console.log(req1);
+      let signingPayload = await prepareJWSPayload(
+        { ...req1.payload },
+        {
+          issuer: OIDC_ISSUE,
+          alg: ES256K,
+          expiresIn: 5 * 60,
+        },
+        {
+          alg: ES256K,
+          typ: "JWT",
+          kid: `${did}#key-1`,
+        }
+      );
       let job_Id = uuidv4();
       const objectStore = {
         did: did,
@@ -63,47 +83,72 @@ export const didRegistryClientSideSecret = async (
         authReqPayload: req1.authRequestObject,
         publicKeyJwk: jwkPK,
         clientAddress: clientAddress,
+        signingPayload: signingPayload,
+        currentState: "signOnboardRequest",
       };
       map.set(job_Id, objectStore);
+      console.log(map.get(job_Id));
       return {
         jobId: job_Id,
         didState: {
           state: "action",
-          action: "signOnboardRequest",
+          action: "signPayload",
           signingRequest: {
             request1: {
               payload: req1.payload,
-              did:did,
+              did: did,
               kid: `${did}#key-1`,
               alg: ES256K,
               typ: "JWT",
               issuer: OIDC_ISSUE,
+              serializedPayload: sha256(signingPayload),
             },
           },
         },
       };
     case "signOnboardRequest":
       console.log(currentState);
-      const objectMap1 = map.get(jobID);
-      if (objectMap1 == null) throw new Error("Invalid JobId");
-      console.log(objectMap1.did);
-      console.log(objectMap1.token);
-      const req2 = await getVerifiableCredential(
-        objectMap1.authReqPayload,
-        options.signedPayload,
-        objectMap1.token
-      );
 
-      const objectStore1 = {
-        did: objectMap1.did,
-        didDocument: objectMap1.didDocument,
-        unSignedTx: null,
-        token: objectMap1.token,
-        authReqPayload: objectMap1.authRequestObject,
-        publicKeyJwk: objectMap1.publicKeyJwk,
-        clientAddress: objectMap1.clientAddress,
+      if (objectMap == null) throw new Error("Invalid JobId");
+      const jwt = [objectMap.signingPayload, options.signedPayload].join(".");
+      const req2 = await getVerifiableCredential(objectMap.authReqPayload, jwt, objectMap.token);
+
+      const resolverOptions = {
+        resolver: `https://api.preprod.ebsi.eu/did-registry/v2/identifiers`,
+        tirUrl: `https://api.preprod.ebsi.eu/trusted-issuers-registry/v2/issuers`,
       };
-      console.log(objectStore1);
+      const presentation = {
+        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        type: "VerifiablePresentation",
+        verifiableCredential: [req2.verifiableCredential],
+        holder: objectMap.did,
+      };
+      // this payload goes to client
+
+      const vpPayload = await prepareJWSPayload(
+        presentation,
+        {
+          alg: "ES256K",
+          issuer: objectMap.did,
+          canonicalize: true,
+        },
+        {
+          alg: "ES256K",
+          typ: "JWT",
+          kid: `${resolverOptions.resolver}/${objectMap.did}#keys-1`,
+        }
+      );
+      const objectStore1 = {
+        did: objectMap.did,
+        didDocument: objectMap.didDocument,
+        unSignedTx: null,
+        token: objectMap.token,
+        authReqPayload: presentation,
+        publicKeyJwk: objectMap.publicKeyJwk,
+        clientAddress: objectMap.clientAddress,
+        signingPayload: vpPayload,
+        currentState: "signVerifiableCredential",
+      };
       map.delete(jobID);
       map.set(jobID, objectStore1);
 
@@ -111,36 +156,72 @@ export const didRegistryClientSideSecret = async (
         jobId: jobID,
         didState: {
           state: "action",
-          action: "signVerifiableCredential",
+          action: "signPayload",
           signingRequest: {
             request1: {
               payload: req2.verifiableCredential,
-              kid: `${objectMap1.did}#key-1`,
+              kid: `${objectMap.did}#key-1`,
               alg: ES256K,
-              did: objectMap1.did,
+              did: objectMap.did,
+              serializedPayload: sha256(vpPayload),
             },
           },
         },
       };
     case "signVerifiableCredential":
       console.log(currentState);
-      const objectMap2 = map.get(jobID);
-      if (objectMap2 == null) throw new Error("Invalid JobId");
-      console.log(options.signedPayload);
-      const req3 = await siopPayload(
-        options.signedPayload,
-        objectMap2.publicKeyJwk,
-        objectMap2.did
+      if (objectMap == null) throw new Error("Invalid JobId");
+      const jwtVP = [objectMap.signingPayload, options.signedPayload].join(".");
+      const signatureValue = {
+        proofValue: `${jwtVP}`,
+        proofValueName: "jws",
+        iat: extractIatFromJwt(jwtVP),
+      };
+      const requiredProof = {
+        type: "EcdsaSecp256k1Signature2019",
+        proofPurpose: "assertionMethod",
+        verificationMethod: `${objectMap.did}#keys-1`,
+      };
+      const resolverOptions2 = {
+        resolver: `https://api.preprod.ebsi.eu/did-registry/v2/identifiers`,
+        tirUrl: `https://api.preprod.ebsi.eu/trusted-issuers-registry/v2/issuers`,
+      };
+      const verifiablePresentation = await createVerifiablePresentation(
+        objectMap.authReqPayload,
+        requiredProof,
+        signatureValue,
+        resolverOptions2
+      );
+      console.log(verifiablePresentation);
+      const req3 = await siopPayload(verifiablePresentation, objectMap.publicKeyJwk, objectMap.did);
+      const payloadSIOP = req3.payload;
+
+      console.log(payloadSIOP);
+      console.log("gereeresfsd");
+      let signingPayloadSIOP = await prepareJWSPayload(
+        { ...payloadSIOP },
+        {
+          issuer: OIDC_ISSUE,
+          alg: ES256K,
+          expiresIn: 5 * 60,
+        },
+        {
+          alg: ES256K,
+          typ: "JWT",
+          kid: `${objectMap.did}#key-1`,
+        }
       );
 
       const objectStore2 = {
-        did: objectMap2.did,
-        didDocument: objectMap2.didDocument,
+        did: objectMap.did,
+        didDocument: objectMap.didDocument,
         unSignedTx: null,
-        token: objectMap2.token,
+        token: objectMap.token,
         authReqPayload: req3.authRequestObject,
-        publicKeyJwk: objectMap2.publicKeyJwk,
-        clientAddress: objectMap2.clientAddress,
+        publicKeyJwk: objectMap.publicKeyJwk,
+        clientAddress: objectMap.clientAddress,
+        signingPayload: signingPayloadSIOP,
+        currentState: "signSIOPRequest",
       };
       map.delete(jobID);
       map.set(jobID, objectStore2);
@@ -149,15 +230,16 @@ export const didRegistryClientSideSecret = async (
         jobId: jobID,
         didState: {
           state: "action",
-          action: "signSIOPRequest",
+          action: "signPayload",
           signingRequest: {
             request1: {
               payload: req3.payload,
-              kid: `${objectMap2.did}#key-1`,
+              kid: `${objectMap.did}#key-1`,
               alg: ES256K,
-              did: objectMap2.did,
+              did: objectMap.did,
               typ: "JWT",
               issuer: OIDC_ISSUE,
+              serializedPayload: sha256(signingPayloadSIOP),
             },
           },
         },
@@ -165,18 +247,19 @@ export const didRegistryClientSideSecret = async (
 
     case "signSIOPRequest":
       console.log(currentState);
-      const objectMap3 = map.get(jobID);
-      if (objectMap3 == null) throw new Error("Invalid JobId");
-      const req4 = await getEncryptedToken(objectMap3.authReqPayload, options.signedPayload);
+      if (objectMap == null) throw new Error("Invalid JobId");
+      const jwtSIOP = [objectMap.signingPayload, options.signedPayload].join(".");
+      const req4 = await getEncryptedToken(objectMap.authReqPayload, jwtSIOP);
 
       const objectStore3 = {
-        did: objectMap3.did,
-        didDocument: objectMap3.didDocument,
+        did: objectMap.did,
+        didDocument: objectMap.didDocument,
         unSignedTx: null,
-        token: objectMap3.token,
-        authReqPayload: objectMap3.authRequestObject,
-        publicKeyJwk: objectMap3.publicKeyJwk,
-        clientAddress: objectMap3.clientAddress,
+        token: objectMap.token,
+        authReqPayload: objectMap.authRequestObject,
+        publicKeyJwk: objectMap.publicKeyJwk,
+        clientAddress: objectMap.clientAddress,
+        currentState: "decryptPayload",
       };
       map.delete(jobID);
       map.set(jobID, objectStore3);
@@ -185,42 +268,45 @@ export const didRegistryClientSideSecret = async (
         jobId: jobID,
         didState: {
           state: "action",
-          action: "decodeToken",
+          action: "decryptPayload",
           signingRequest: {
             request1: {
               payload: req4.siopResponse,
-              kid: `${objectMap3.did}#key-1`,
+              kid: `${objectMap.did}#key-1`,
               alg: ES256K,
               typ: "JWT",
               issuer: OIDC_ISSUE,
+              serializedPayload: req4.siopResponse.response.ake1_enc_payload,
             },
           },
         },
       };
-    case "decodeToken":
+    case "decryptPayload":
       console.log(currentState);
-      const objectMap4 = map.get(jobID);
-      if (objectMap4 == null) throw new Error("Invalid JobId");
+      if (objectMap == null) throw new Error("Invalid JobId");
 
       const buildParam = await buildParams({
-        did: objectMap4.did,
-        publicKey: [objectMap4.publicKeyJwk],
-        didDoc: objectMap4.didDocument,
+        did: objectMap.did,
+        publicKey: [objectMap.publicKeyJwk],
+        didDoc: objectMap.didDocument,
       });
       let param = {
-        from: objectMap4.clientAddress,
+        from: objectMap.clientAddress,
         ...buildParam.param,
       };
       didDoc = buildParam.info.data;
-      const uTx = await constructUnsignedTx(token, url, "insertDidDocument", param);
+      const unsignedTxs = await constructUnsignedTx(token, url, "insertDidDocument", param);
+      const serializedPayload = await serializeTx(unsignedTxs.formatedUnsignedTx);
+
       const objectStore4 = {
-        did: objectMap4.did,
+        did: objectMap.did,
         didDocument: didDoc,
-        unSignedTx: unSigned,
+        unSignedTx: unsignedTxs.unsignedTx,
         token: token,
         authReqPayload: null,
-        publicKeyJwk: objectMap4.publicKeyJwk,
-        clientAddress: objectMap4.clientAddress,
+        publicKeyJwk: objectMap.publicKeyJwk,
+        clientAddress: objectMap.clientAddress,
+        currentState: "signEthereumTxRequest",
       };
       map.delete(jobID);
       map.set(jobID, objectStore4);
@@ -228,28 +314,26 @@ export const didRegistryClientSideSecret = async (
         jobId: jobID,
         didState: {
           state: "action",
-          action: "signEthereumTxRequest",
+          action: "signPayload",
           signingRequest: {
             request1: {
-              payload: uTx,
-              kid: `${objectMap4.did}#key-1`,
+              payload: unsignedTxs.formatedUnsignedTx,
+              kid: `${objectMap.did}#key-1`,
               alg: "secp256k1",
+              serializedPayload: serializedPayload,
             },
           },
         },
       };
     case "signEthereumTxRequest":
       console.log(currentState);
-      const objectMap5 = map.get(jobID);
-      if (objectMap5 == null) throw new Error("Invalid JobId");
-      console.log(objectMap5.did);
-      console.log(objectMap5.didDocument);
-      const res = await constructSignedTx(
-        objectMap5.token,
-        url,
-        options.signedPayload,
-        objectMap5.unSignedTx
-      );
+      if (objectMap == null) throw new Error("Invalid JobId");
+      console.log(objectMap.did);
+      console.log(objectMap.didDocument);
+      const formatedTx = formatEthersUnsignedTransaction(objectMap.unSignedTx);
+      console.log(formatedTx);
+      const signature = await signedTransactionSignature(formatedTx, options.signedPayload);
+      const res = await constructSignedTx(objectMap.token, url, signature, objectMap.unSignedTx);
       console.log("Signed Tx response..............");
       console.log(res.data);
       // remove jobId after completion
@@ -257,8 +341,8 @@ export const didRegistryClientSideSecret = async (
       return {
         didState: {
           state: "finished",
-          identifier: objectMap5.did,
-          didDocument: objectMap5.didDocument,
+          identifier: objectMap.did,
+          didDocument: objectMap.didDocument,
         },
       };
     default:
@@ -266,7 +350,12 @@ export const didRegistryClientSideSecret = async (
   }
 };
 
-const constructUnsignedTx = async (token:string, url:string, method:string, param:any) => {
+const constructUnsignedTx = async (
+  token: string,
+  url: string,
+  method: string,
+  param: any
+): Promise<{ unsignedTx: UnsignedTX ; formatedUnsignedTx: UnsignedTX }> => {
   const body = jsonrpcBody(method, [param]);
   console.log(JSON.stringify(param));
   let response;
@@ -278,16 +367,14 @@ const constructUnsignedTx = async (token:string, url:string, method:string, para
     console.log(error.message);
     throw new Error("Failed to create unsignedTX");
   }
-  console.log(response);
   const unsignedTransaction = response.data.result;
-  unSigned = unsignedTransaction;
   const uTx = formatEthersUnsignedTransaction(JSON.parse(JSON.stringify(unsignedTransaction)));
   console.log("unsigned tx");
   console.log(uTx);
-  return uTx;
+  return { unsignedTx: <UnsignedTX>unsignedTransaction, formatedUnsignedTx: uTx };
 };
 
-const constructSignedTx = async (token:string, url:string, signedTx:any, unSignedTx:any) => {
+const constructSignedTx = async (token: string, url: string, signedTx: any, unSignedTx: any) => {
   const bodySend = jsonrpcBody("signedTransaction", [paramSignedTransaction(unSignedTx, signedTx)]);
   console.log(signedTx);
   console.log(unSignedTx);
@@ -304,7 +391,7 @@ const constructSignedTx = async (token:string, url:string, signedTx:any, unSigne
   return response;
 };
 
-const formatEthersUnsignedTransaction = (unsignedTransaction) => {
+const formatEthersUnsignedTransaction = (unsignedTransaction: UnsignedTX): UnsignedTX => {
   return {
     to: unsignedTransaction.to,
     data: unsignedTransaction.data,

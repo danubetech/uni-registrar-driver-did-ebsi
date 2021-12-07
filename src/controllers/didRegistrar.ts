@@ -9,7 +9,6 @@ export const create = async (req: Request, res: Response): Promise<void> => {
   if (req.body.secret == null) throw "Invalid params";
   try {
     let response;
-    console.log(req.body);
     if (req.body.options && req.body.options.clientSideSecret == true) {
       console.log("Client Secret Mode");
       response = await didRegistryClientSideSecret(
