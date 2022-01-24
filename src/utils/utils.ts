@@ -141,7 +141,8 @@ export const constructDidDoc = async (
     if (!("@context" in didDocument) || doc["@context"].length == 0)
       doc["@context"] = [CONTEXT_W3C_DID];
     doc["id"] = didUser;
-    doc["verificationMethod"] = verificationMethod(didUser, publicKey);
+    if (!("verificationMethod" in didDocument) || doc["verificationMethod"].length == 0)
+      doc["verificationMethod"] = verificationMethod(didUser, publicKey);
     if (!("authentication" in didDocument) || doc["authentication"].length == 0)
       doc["authentication"] = [`${didUser}#keys-1`];
     if (!(ASSERTION_METHOD in didDocument) || doc[ASSERTION_METHOD].length == 0)
