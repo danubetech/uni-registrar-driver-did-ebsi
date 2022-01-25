@@ -60,9 +60,9 @@ type SigningPayload = {
 };
 
 export interface buildParamsObject {
-  didDoc: object;
   did: string;
-  publicKey: Array<object>;
+  didDoc?: DIDDocument;
+  publicKey: Array<JwkKeyFormat>;
 }
 
 export type UnsignedTX = {
@@ -156,9 +156,9 @@ export type DIDDocument = {
 };
 
 export interface VerificationMethod {
-  id: string;
   type: string;
-  controller: string;
+  id?: string;
+  controller?: string;
   publicKeyBase58?: string;
   publicKeyBase64?: string;
   publicKeyJwk?: JsonWebKey;
@@ -175,14 +175,14 @@ export interface JsonWebKey extends Extensible {
   ext?: boolean;
   key_ops?: string[];
   kid?: string;
-  kty: string;
+  kty?: string;
   n?: string;
   use?: string;
   x?: string;
   y?: string;
 }
 
-export interface ServiceEndpoint {
+export type ServiceEndpoint ={
   id: string;
   type: string;
   serviceEndpoint: string;
@@ -192,7 +192,7 @@ export interface ServiceEndpoint {
 export type SignerAlgorithm = (payload: string, signer: Signer) => Promise<string>;
 
 export type Signer = (data: string | Uint8Array) => Promise<EcdsaSignature | string>;
-export interface EcdsaSignature {
+export type EcdsaSignature = {
   r: string;
   s: string;
   recoveryParam?: number | null;

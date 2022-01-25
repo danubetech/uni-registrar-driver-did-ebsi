@@ -8,6 +8,7 @@ import {
   ECDSA_SECP_256_K1_SIGNATURE_2019,
   ES256K,
   ASSERTION_METHOD,
+  JSON_WEB_Key_2020,
 } from "./constants";
 
 import { ethers } from "ethers";
@@ -16,7 +17,7 @@ import buffer_1 from "buffer";
 import { createVerifiablePresentation, VerifiablePresentation } from "@cef-ebsi/verifiable-presentation";
 import crypto from "crypto";
 import { VerifiableCredential } from "@cef-ebsi/verifiable-credential";
-import { UnsignedTX, DIDDocument } from "../utils/types";
+import { UnsignedTX, DIDDocument,VerificationMethod,JsonWebKey } from "../utils/types";
 
 export const signDidAuthInternal = async (did:string, payload:any, hexPrivateKey:string):Promise<string> => {
   // check hexPrivateKey is valid
@@ -130,28 +131,32 @@ export const sendApiTransaction = async (
 
 export const constructDidDoc = async (
   didUser: string,
-  publicKey: Array<object>,
-  didDocument: object
-): Promise<{ didDoc: object }> => {
+  publicKey: Array<JsonWebKey>,
+  didDocument?: DIDDocument
+): Promise<{ didDoc: DIDDocument }> => {
   if (didDocument == null || Object.keys(didDocument).length < 3)
     return { didDoc: defaultDidDoc(didUser, publicKey) };
   else {
     //\\ TODO: construct the did doc and insert the key properly
-    let doc: object = didDocument;
-    if (!("@context" in didDocument) || doc["@context"].length == 0)
-      doc["@context"] = [CONTEXT_W3C_DID];
+    let doc: DIDDocument = didDocument;
+    if (!doc["@context"]) doc["@context"] = [CONTEXT_W3C_DID];
     doc["id"] = didUser;
-    if (!("verificationMethod" in didDocument) || doc["verificationMethod"].length == 0)
-      doc["verificationMethod"] = verificationMethod(didUser, publicKey);
-    if (!("authentication" in didDocument) || doc["authentication"].length == 0)
-      doc["authentication"] = [`${didUser}#keys-1`];
-    if (!(ASSERTION_METHOD in didDocument) || doc[ASSERTION_METHOD].length == 0)
-      doc["assertionMethod"] = [`${didUser}#keys-1`];
+    if (!doc.authentication) doc["authentication"] = [`${didUser}#keys-1`];
+    if (!doc.assertionMethod) doc["assertionMethod"] = [`${didUser}#keys-1`];
+    if (!doc.verificationMethod) { 
+      doc.verificationMethod = verificationMethod(didUser, publicKey);
+    }else if (doc.verificationMethod) {
+      let publicKeyObj: Array<JsonWebKey | VerificationMethod> = [];
+      publicKeyObj.push.apply(publicKeyObj,publicKey);
+      publicKeyObj.push.apply(publicKeyObj,doc["verificationMethod"]);
+      doc["verificationMethod"] = verificationMethod(didUser, publicKeyObj);
+    }
+      
     return { didDoc: doc };
   }
 };
 
-const defaultDidDoc = (didUser: string, publicKey: Array<object>) => {
+const defaultDidDoc = (didUser: string, publicKey: Array<JsonWebKey>): DIDDocument => {
   return {
     "@context": [CONTEXT_W3C_DID],
     id: didUser,
@@ -167,16 +172,25 @@ export const fromHexString = (hexString: string) => {
   return new Uint8Array(match.map((byte) => parseInt(byte, 16)));
 };
 
-const verificationMethod = (didUser: string, publicKey: Array<object>) => {
-  let verificationMethodObject: Array<object> = [];
-
+const verificationMethod = (didUser: string, publicKey: Array<JsonWebKey|VerificationMethod>) => {
+  let verificationMethodObject: Array<VerificationMethod> = [];
+  
   for (let i = 0; i < publicKey.length; i++) {
-    verificationMethodObject.push({
-      id: `${didUser}#keys-${i + 1}`,
-      controller: didUser,
-      type: "JsonWebKey2020",
-      publicKeyJwk: publicKey[i] ,
-    });
+    if (publicKey[i].type && publicKey[i].type != null) {
+      verificationMethodObject.push({
+        id: `${didUser}#keys-${i + 1}`,
+        controller: didUser,
+        type: publicKey[i].type,
+        publicKeyJwk: publicKey[i].publicKeyJwk,
+      });
+    } else {
+      verificationMethodObject.push({
+        id: `${didUser}#keys-${i + 1}`,
+        controller: didUser,
+        type: JSON_WEB_Key_2020,
+        publicKeyJwk: publicKey[i],
+      });
+    }
   }
   return verificationMethodObject;
 };

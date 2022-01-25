@@ -9,7 +9,7 @@ import { DIDDocument } from "../utils/types";
 
 export const didRegistry = async (
   token: string,
-  didDocument: DIDDocument,
+  didDocument?: DIDDocument,
   secretKey?: object
 ): Promise<DidRegistrationResponse> => {
   

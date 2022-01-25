@@ -57,7 +57,6 @@ export const ES256KSignerAlg = (recoverable?: boolean): SignerAlgorithm =>{
           `not_supported: ES256K-R not supported when signer doesn't provide a recovery param`
         );
       }
-      console.log('hre........')
       console.log(signature)
       return signature;
     }

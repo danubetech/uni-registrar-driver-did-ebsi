@@ -1,12 +1,11 @@
 import { prepareDIDRegistryObject, constructDidDoc } from "./utils";
 import { ethers } from "ethers";
-import { buildParamsObject } from "../utils/types";
+import { buildParamsObject, DIDDocument, JwkKeyFormat,JsonWebKey } from "../utils/types";
 
 export const buildParams = async (buildParamsObj: buildParamsObject) => {
   const controllerDid = buildParamsObj.did;
   let newDidDocument;
   if (buildParamsObj.publicKey) {
-    console.log(buildParamsObj.publicKey);
     newDidDocument = await prepareDidDocumentWithPublicKey(
       controllerDid,
       buildParamsObj.publicKey,
@@ -19,7 +18,6 @@ export const buildParams = async (buildParamsObj: buildParamsObject) => {
     timestampDataBuffer,
     didVersionMetadataBuffer,
   } = newDidDocument;
-  console.log(JSON.stringify(didDocument,null,2));
   const didDocumentBuffer = Buffer.from(JSON.stringify(didDocument));
 
   return {
@@ -40,10 +38,11 @@ export const buildParams = async (buildParamsObj: buildParamsObject) => {
 
 const prepareDidDocumentWithPublicKey = async (
   didUser: string,
-  publicKey: Array<object>,
-  reqDidDoc: object
+  publicKey: Array<JwkKeyFormat>,
+  reqDidDoc?: DIDDocument
 ) => {
-  const didDocument = (await constructDidDoc(didUser, publicKey, reqDidDoc)).didDoc;
+  const didDocument = (await constructDidDoc(didUser, publicKey as Array<JsonWebKey>, reqDidDoc))
+    .didDoc;
   return await prepareDIDRegistryObject(didDocument);
 };
 
