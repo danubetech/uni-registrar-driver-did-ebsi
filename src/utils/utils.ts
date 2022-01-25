@@ -14,12 +14,19 @@ import {
 import { ethers } from "ethers";
 import base64url from "base64url";
 import buffer_1 from "buffer";
-import { createVerifiablePresentation, VerifiablePresentation } from "@cef-ebsi/verifiable-presentation";
+import {
+  createVerifiablePresentation,
+  VerifiablePresentation,
+} from "@cef-ebsi/verifiable-presentation";
 import crypto from "crypto";
 import { VerifiableCredential } from "@cef-ebsi/verifiable-credential";
-import { UnsignedTX, DIDDocument,VerificationMethod,JsonWebKey } from "../utils/types";
+import { UnsignedTX, DIDDocument, VerificationMethod, JsonWebKey } from "../utils/types";
 
-export const signDidAuthInternal = async (did:string, payload:any, hexPrivateKey:string):Promise<string> => {
+export const signDidAuthInternal = async (
+  did: string,
+  payload: any,
+  hexPrivateKey: string
+): Promise<string> => {
   // check hexPrivateKey is valid
   const request = !!payload.client_id;
 
@@ -40,7 +47,11 @@ export const signDidAuthInternal = async (did:string, payload:any, hexPrivateKey
   return response;
 };
 
-export const createVP = async (did:string, privateKey:string, vc:VerifiableCredential):Promise<VerifiablePresentation> => {
+export const createVP = async (
+  did: string,
+  privateKey: string,
+  vc: VerifiableCredential
+): Promise<VerifiablePresentation> => {
   const options = {
     resolver: `https://api.preprod.ebsi.eu/did-registry/v2/identifiers`,
     tirUrl: `https://api.preprod.ebsi.eu/trusted-issuers-registry/v2/issuers`,
@@ -83,13 +94,11 @@ export const createVP = async (did:string, privateKey:string, vc:VerifiableCrede
   return createVerifiablePresentation(presentation, requiredProof, signatureValue, options);
 };
 
-export const extractIatFromJwt = (jwt:string) => {
+export const extractIatFromJwt = (jwt: string) => {
   const token = jwt.split(".");
   const payload = base64url.decode(token[1]);
   return JSON.parse(payload).iat;
 };
-
-
 
 export const prepareDIDRegistryObject = async (
   didDocument: any
@@ -139,19 +148,31 @@ export const constructDidDoc = async (
   else {
     //\\ TODO: construct the did doc and insert the key properly
     let doc: DIDDocument = didDocument;
+    let publicKeyObj: Array<JsonWebKey | VerificationMethod> = [];
+    publicKeyObj.push.apply(publicKeyObj, publicKey);
     if (!doc["@context"]) doc["@context"] = [CONTEXT_W3C_DID];
     doc["id"] = didUser;
-    if (!doc.authentication) doc["authentication"] = [`${didUser}#keys-1`];
+
     if (!doc.assertionMethod) doc["assertionMethod"] = [`${didUser}#keys-1`];
-    if (!doc.verificationMethod) { 
-      doc.verificationMethod = verificationMethod(didUser, publicKey);
-    }else if (doc.verificationMethod) {
-      let publicKeyObj: Array<JsonWebKey | VerificationMethod> = [];
-      publicKeyObj.push.apply(publicKeyObj,publicKey);
-      publicKeyObj.push.apply(publicKeyObj,doc["verificationMethod"]);
-      doc["verificationMethod"] = verificationMethod(didUser, publicKeyObj);
+    if (doc.verificationMethod) {
+      publicKeyObj.push.apply(publicKeyObj, doc["verificationMethod"]);
     }
-      
+    if (!doc.authentication) doc["authentication"] = [`${didUser}#keys-1`];
+    else if (doc.authentication) {
+      publicKeyObj.push.apply(publicKeyObj, doc["authentication"]);
+      let auth: Array<string> = [];
+      for (let i = 0; i < doc.authentication.length; i++) { 
+        const keyId = doc.authentication[i]["id"]
+          ? `${didUser}#${doc.authentication[i]["id"]}`
+          : `${didUser}#keys-${publicKeyObj.length}`;
+        auth.push(keyId)
+        
+      }
+      console.log(auth)
+      doc["authentication"] = auth;
+    }
+    doc["verificationMethod"] = verificationMethod(didUser, publicKeyObj);
+
     return { didDoc: doc };
   }
 };
@@ -172,38 +193,42 @@ export const fromHexString = (hexString: string) => {
   return new Uint8Array(match.map((byte) => parseInt(byte, 16)));
 };
 
-const verificationMethod = (didUser: string, publicKey: Array<JsonWebKey|VerificationMethod>) => {
+const verificationMethod = (didUser: string, publicKey: Array<JsonWebKey | VerificationMethod>) => {
   let verificationMethodObject: Array<VerificationMethod> = [];
-  
+
   for (let i = 0; i < publicKey.length; i++) {
-    if (publicKey[i].type && publicKey[i].type != null) {
-      verificationMethodObject.push({
-        id: `${didUser}#keys-${i + 1}`,
-        controller: didUser,
-        type: publicKey[i].type,
-        publicKeyJwk: publicKey[i].publicKeyJwk,
-      });
-    } else {
-      verificationMethodObject.push({
-        id: `${didUser}#keys-${i + 1}`,
-        controller: didUser,
-        type: JSON_WEB_Key_2020,
-        publicKeyJwk: publicKey[i],
-      });
-    }
+    const id = publicKey[i].id ? `${didUser}#${publicKey[i].id}` : `${didUser}#keys-${i + 1}`;
+    const type = publicKey[i].type && publicKey[i].type != null
+      ? publicKey[i].type : JSON_WEB_Key_2020;
+    const publicKeyJwk = publicKey[i].publicKeyJwk ? publicKey[i].publicKeyJwk : publicKey[i];
+
+    verificationMethodObject.push({
+      id: id,
+      controller: didUser,
+      type: type,
+      publicKeyJwk: publicKeyJwk,
+    });
   }
   return verificationMethodObject;
 };
 
-export const jsonrpcSendTransaction = async (client:any, token:string, url:string, method:string, param:any) => {
+export const jsonrpcSendTransaction = async (
+  client: any,
+  token: string,
+  url: string,
+  method: string,
+  param: any
+) => {
   const body = jsonrpcBody(method, [param]);
   console.log(JSON.stringify(param));
-  const response = await axios.post(url, body, {
-    headers: { Authorization: `Bearer ${token}` },
-  }).catch(error => { 
-    console.log(error.message)
-    throw error(error.message);
-  });
+  const response = await axios
+    .post(url, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .catch((error) => {
+      console.log(error.message);
+      throw error(error.message);
+    });
   const unsignedTransaction = response.data.result;
   const uTx = formatEthersUnsignedTransaction(JSON.parse(JSON.stringify(unsignedTransaction)));
   console.log("unsigned tx");
@@ -226,7 +251,7 @@ export const jsonrpcSendTransaction = async (client:any, token:string, url:strin
     });
 };
 
-export const jsonrpcBody = (method:string, params:any) => {
+export const jsonrpcBody = (method: string, params: any) => {
   return {
     jsonrpc: "2.0",
     method,
@@ -286,7 +311,7 @@ export const base64ToBase64Url = (privateKey) => {
     .replace(/=/g, "");
 };
 
-const getLedgerTx = async (txId:string, token:string) => {
+const getLedgerTx = async (txId: string, token: string) => {
   const url = `https://api.preprod.ebsi.eu/ledger/v2/blockchains/besu`;
   const body = jsonrpcBody("eth_getTransactionReceipt", txId);
   const response = await axios.post(url, body, {
