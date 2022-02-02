@@ -295,7 +295,7 @@ export const didRegistryClientSideSecret = async (
         ...buildParam.param,
       };
       didDoc = buildParam.info.data;
-      const sessionToken = options.signedPayload; 
+      const sessionToken = JSON.parse(options.decryptedPayload).access_token; 
       const unsignedTxs = await constructUnsignedTx(sessionToken, url, "insertDidDocument", param);
       const serializedPayload = await serializeTx(unsignedTxs.formatedUnsignedTx);
 
