@@ -30,7 +30,6 @@ export const userOnBoardAuthReq = async (
   
   const authReq = await createAuthenticationRequest(did, publicKeyJwk);
   const authReqObject = authReq.authRequestObject;
-  //("------------------------------------------------------------------------------------------------");
   // signs payload using internal libraries
   //const jwt = await signDidAuthInternal(did, authReq.payload, privateKey);
   let signingPayload = await prepareJWSPayload(
@@ -49,13 +48,9 @@ export const userOnBoardAuthReq = async (
   const signature = await signJWS(signingPayload, ES256K, ES256KSigner(privateKey.replace("0x", "")));
   const jwt = [signingPayload, signature].join(".");
 
-  //("------------------------------------------------------------------------------------------------");
-
   const verifiableCredntial = (await getVerifiableCredential(authReqObject, jwt, token)).verifiableCredential;
 
   console.log(verifiableCredntial);
-
-  //("------------------------------------------------------------------------------------------------");
 
   //const verifiablePresentation = await createVP(did, privateKey, verifiableCredntial);
 
@@ -104,12 +99,11 @@ export const userOnBoardAuthReq = async (
 
   const verifiablePresentation = await createVerifiablePresentation(presentation, requiredProof, signatureValue, options);
 
-  //("------------------------------------------------------------------------------------------------");
+
   console.log(verifiablePresentation);
 
   const siopPayloadRequest = await siopPayload(verifiablePresentation, publicKeyJwk, did);
   const payloadSIOP = siopPayloadRequest.payload;
-  //("------------------------------------------------------------------------------------------------");
   // signs payload using internal libraries
   //const jwtSIOP = await signDidAuthInternal(did, payloadSIOP, privateKey);
   const requestObject = siopPayloadRequest.authRequestObject;
@@ -133,9 +127,6 @@ export const userOnBoardAuthReq = async (
     ES256KSigner(privateKey.replace("0x", ""))
   );
   const jwtSIOP = [signingPayloadSIOP, signatureSIOP].join(".");
-
-  //("------------------------------------------------------------------------------------------------");
-
 
   const encryptedToken = await getEncryptedToken(requestObject,jwtSIOP);
 
@@ -195,7 +186,6 @@ export const getEncryptedToken = async (
     nonce: requestObject.nonce,
     response: responseSession.data,
   };
-  console.log(siopSessionResponse);
   return { siopResponse: siopSessionResponse };
 };
 
