@@ -37,9 +37,7 @@ export const didRegistryClientSideSecret = async (
   const web3 = new Web3();
 
   if (jobID != null) {
-    console.log(jobID);
     objectMap = map.get(jobID);
-    console.log(map);
     currentState = objectMap.currentState;
   }
 
@@ -87,7 +85,6 @@ export const didRegistryClientSideSecret = async (
         currentState: "signOnboardRequest",
       };
       map.set(job_Id, objectStore);
-      console.log(map.get(job_Id));
       return {
         jobId: job_Id,
         didState: {
@@ -197,7 +194,6 @@ export const didRegistryClientSideSecret = async (
       const payloadSIOP = req3.payload;
 
       console.log(payloadSIOP);
-      console.log("gereeresfsd");
       let signingPayloadSIOP = await prepareJWSPayload(
         { ...payloadSIOP },
         {

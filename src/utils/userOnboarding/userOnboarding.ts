@@ -286,7 +286,6 @@ export const createAuthenticationRequest = async (
       console.log(error.message);
       throw Error("SIOP request failed");
     });
-  console.log(authReq.status);
   const uriAuthDecoded = querystring.decode(
     authReq.data.session_token.replace("openid://?", "")
   ) as {
