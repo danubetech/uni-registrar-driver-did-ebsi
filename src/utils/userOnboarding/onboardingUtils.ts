@@ -81,7 +81,7 @@ const getAudience = (jwt:string) => {
 };
 
 
-const getThumbprint = async (jwk: JWK):Promise<string> => {
+export const getThumbprint = async (jwk: JWK):Promise<string> => {
   const thumbprint = await calculateJwkThumbprint(jwk, "sha256");
   return thumbprint;
 };

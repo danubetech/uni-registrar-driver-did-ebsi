@@ -9,7 +9,6 @@ import {
   ES256K,
   ASSERTION_METHOD,
   JSON_WEB_Key_2020,
-  CONTEXT_W3C_SEC_JWS,
 } from "./constants";
 
 import { ethers } from "ethers";
@@ -180,7 +179,7 @@ export const constructDidDoc = async (
 
 const defaultDidDoc = (didUser: string, publicKey: Array<JsonWebKey>): DIDDocument => {
   return {
-    "@context": [CONTEXT_W3C_DID,CONTEXT_W3C_SEC_JWS],
+    "@context": [CONTEXT_W3C_DID],
     id: didUser,
     verificationMethod: verificationMethod(didUser, publicKey),
     authentication: [`${didUser}#keys-1`],
@@ -194,7 +193,7 @@ export const fromHexString = (hexString: string) => {
   return new Uint8Array(match.map((byte) => parseInt(byte, 16)));
 };
 
-const verificationMethod = (didUser: string, publicKey: Array<JsonWebKey | VerificationMethod>) => {
+export const verificationMethod = (didUser: string, publicKey: Array<JsonWebKey | VerificationMethod>) => {
   let verificationMethodObject: Array<VerificationMethod> = [];
 
   for (let i = 0; i < publicKey.length; i++) {

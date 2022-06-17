@@ -1,20 +1,27 @@
 import { Request, Response } from "express";
 
-import { didRegistry } from "../services/didRegistry";
+import { legalEtityDID, naturalPersonDID } from "../services/didRegistry";
 import { didUpdate } from "../services/didUpdate";
 
 export const create = async (req: Request, res: Response): Promise<void> => {
   console.log(req.body);
-  if (req.body.secret == null) throw Error("Invalid params");
   try {
     let response;
-
     console.log("Internal Secret Mode");
-    response = await didRegistry(
-      req.body.secret.token,
-      req.body.didDocument,
-      req.body.secret.privateKey
-    );
+    if (req.body.options != null && req.body.options.method == "Natural Person")
+      response = await naturalPersonDID(
+        req.body.didDocument,
+        req.body.options
+      );
+    else{
+      if (req.body.secret == null) throw Error("Invalid params");
+      response = await legalEtityDID(
+        req.body.secret.token,
+        req.body.didDocument,
+        req.body.secret.privateKey
+      );
+    }
+      
 
     try {
       console.log(JSON.stringify(response, null, 2));
