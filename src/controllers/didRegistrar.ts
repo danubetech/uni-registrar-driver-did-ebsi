@@ -5,7 +5,7 @@ import { didUpdate } from "../services/didUpdate";
 
 export const create = async (req: Request, res: Response): Promise<void> => {
   console.log(req.body);
-  if (req.body.secret == null) throw "Invalid params";
+  if (req.body.secret == null) throw Error("Invalid params");
   try {
     let response;
 
