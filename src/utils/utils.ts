@@ -193,7 +193,7 @@ export const fromHexString = (hexString: string) => {
   return new Uint8Array(match.map((byte) => parseInt(byte, 16)));
 };
 
-const verificationMethod = (didUser: string, publicKey: Array<JsonWebKey | VerificationMethod>) => {
+export const verificationMethod = (didUser: string, publicKey: Array<JsonWebKey | VerificationMethod>) => {
   let verificationMethodObject: Array<VerificationMethod> = [];
 
   for (let i = 0; i < publicKey.length; i++) {

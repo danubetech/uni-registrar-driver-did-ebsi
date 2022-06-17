@@ -1,7 +1,8 @@
 import { decodeJWT, verifyEbsiJWT } from "@cef-ebsi/did-jwt";
 import { OIDC_ISSUE } from "../constants";
 import { signDidAuthInternal } from "../utils";
-import { calculateThumbprint,JWK } from "jose/jwk/thumbprint";
+//import { calculateThumbprint,JWK } from "jose/jwk/thumbprint";
+import { calculateJwkThumbprint, JWK,} from "jose";
 import { JwkKeyFormat } from "../types";
 
 export const createAuthenticationResponse = async (
@@ -80,7 +81,7 @@ const getAudience = (jwt:string) => {
 };
 
 
-const getThumbprint = async (jwk: JWK):Promise<string> => {
-  const thumbprint = await calculateThumbprint(jwk, "sha256");
+export const getThumbprint = async (jwk: JWK):Promise<string> => {
+  const thumbprint = await calculateJwkThumbprint(jwk, "sha256");
   return thumbprint;
 };

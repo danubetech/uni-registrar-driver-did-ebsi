@@ -3,7 +3,7 @@ import { userOnBoardAuthReq } from "../utils/userOnboarding/userOnboarding";
 import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
 import { prepareDIDRegistryObject} from "../utils/utils"
-import {  DidRegistrationResponse } from "../utils/types";
+import {  DidRegistrationResponse,JwkKeyFormat } from "../utils/types";
 
 export const didUpdate = async (
   token: string,
@@ -25,7 +25,7 @@ export const didUpdate = async (
   client = new ethers.Wallet("0x" + privateKey);
   client.did = did;
   const wallet = new EbsiWallet("0x" + privateKey);
-  const publicKeyJwk = await wallet.getPublicKey({ format: "jwk" });
+  const publicKeyJwk = <JwkKeyFormat> wallet.getPublicKey({ format: "jwk" });
 
   const idToken = (await userOnBoardAuthReq(token, did, publicKeyJwk, privateKey)).id_token;
 

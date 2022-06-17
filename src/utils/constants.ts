@@ -1,6 +1,7 @@
 export const CONTEXT_W3C_DID = "https://www.w3.org/ns/did/v1";
-export const CONTEXT_W3C_SEC =
+export const CONTEXT_W3C_SEC_SECP256K1 =
   "https://w3id.org/security/suites/secp256k1-2019/v1";
+export const CONTEXT_W3C_SEC_JWS="https://w3id.org/security/suites/jws-2020/v1";
 export const CONTEXT_W3C_VC = "https://www.w3.org/2018/credentials/v1";
 export const OIDC_ISSUE = "https://self-issued.me";
 export const VERIFIABLE_PRESENTATION = "VerifiablePresentation";
