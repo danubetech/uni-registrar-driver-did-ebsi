@@ -93,7 +93,7 @@ export const naturalPersonDID = async (
   const didDoc = {
     "@context": [CONTEXT_W3C_DID,CONTEXT_W3C_SEC_JWS],
     id: did,
-    verificationMethod: verificationMethod(did, [publicKey]),
+    verificationMethod: verificationMethod(did, [publicKeyJwk]),
     authentication: [`${did}#keys-1`],
     assertionMethod: [`${did}#keys-1`],
   };
