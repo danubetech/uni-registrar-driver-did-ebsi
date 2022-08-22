@@ -4,6 +4,7 @@ import { EbsiWallet } from "@cef-ebsi/wallet-lib";
 import { ethers } from "ethers";
 import { prepareDIDRegistryObject} from "../utils/utils"
 import {  DidRegistrationResponse,JwkKeyFormat } from "../utils/types";
+import {config} from '../config'
 
 export const didUpdate = async (
   token: string,
@@ -14,6 +15,8 @@ export const didUpdate = async (
 ): Promise<{ didState: DidRegistrationResponse }> => {
   let client;
   let privateKey;
+  const baseUrl= config.baseUrl;
+  const ebsiDidRegistryUrl=`${baseUrl}/did-registry/${config.didRegistryApiVersion}/jsonrpc`;
 
   if (privateKeyInput["d"] != null) {
     const buffer = Buffer.from(privateKeyInput["d"], "base64");
@@ -27,7 +30,7 @@ export const didUpdate = async (
   const wallet = new EbsiWallet("0x" + privateKey);
   const publicKeyJwk = <JwkKeyFormat> wallet.getPublicKey({ format: "jwk" });
 
-  const idToken = (await userOnBoardAuthReq(token, did, publicKeyJwk, privateKey)).id_token;
+  const idToken = (await userOnBoardAuthReq(token, did, publicKeyJwk, privateKey,baseUrl)).id_token;
 
   // Creates a URI using the wallet backend that manages entity DID keys
   let method = options.method ? options.method : "updateDidDocument";
@@ -49,7 +52,7 @@ export const didUpdate = async (
     ...buildParam.param,
   };
 
-  await sendApiTransaction(method, idToken, param, client, () => {
+  await sendApiTransaction(method, idToken, param, client,ebsiDidRegistryUrl, () => {
     console.log(buildParam.info.title);
     console.log(buildParam.info.data);
   });
@@ -57,7 +60,7 @@ export const didUpdate = async (
   console.log("here....");
   const didState = {
     state: "finished",
-    identifier: did,
+    did: did,
     didDocument: buildParam.info.data,
   }
   return { didState: {didState:didState}}

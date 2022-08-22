@@ -18,7 +18,7 @@ docker run -p 9080:9080 universalregistrar/driver-did-ebsi
 
 ### DID Registration
 
-- Use the [EBSI authentication token](https://app.preprod.ebsi.eu/users-onboarding/) as "secret" token parameter.
+- Use the [EBSI authentication token](https://app.preprod.ebsi.eu/users-onboarding/v2) as "secret" token parameter.
 
 ```
 curl -X POST "http://localhost:9080/1.0/create?method=ebsi" -H "accept: application/json" -H "Content-Type: application/json" -d "{"secret":{"token":"...ey.."} }"

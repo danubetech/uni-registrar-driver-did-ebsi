@@ -1,12 +1,11 @@
 import * as u8a from "uint8arrays";
 import canonicalizeData from "canonicalize";
 import { resolveProperties } from "@ethersproject/properties";
-import { keccak256 } from "@ethersproject/keccak256";
 import { serialize } from "@ethersproject/transactions";
 import {  splitSignature } from "@ethersproject/bytes";
 import { createHash } from "crypto";
 import { JWTPayload,JWTHeader,JWTOptions,Signer,SignerAlgorithm,EcdsaSignature,UnsignedTransaction, } from "./types";
-
+import EthCrypto from "eth-crypto";
 
 export const prepareJWSPayload = async (
   payload: Partial<JWTPayload>,
@@ -17,7 +16,7 @@ export const prepareJWSPayload = async (
   if (!header.alg) header.alg = alg;
   let timestamps: Partial<JWTPayload> = {
     iat: Math.floor(Date.now() / 1000),
-    exp: undefined,
+    exp: Math.floor(Date.now() / 1000) + 900,
   };
   timestamps.exp = <number>(payload.nbf || timestamps.iat) + Math.floor(expiresIn);
   const fullPayload = { ...timestamps, ...payload, iss: issuer };
@@ -52,7 +51,8 @@ export const ES256KSignerAlg = (recoverable?: boolean): SignerAlgorithm =>{
     if (instanceOfEcdsaSignature(signature)) {
       return toJose(signature, recoverable);
     } else {
-      if (recoverable && typeof fromJose(signature).recoveryParam === "undefined") {
+      const signatureBytes: Uint8Array = base64ToBytes(signature);
+      if (recoverable && typeof fromJose(signatureBytes).recoveryParam === "undefined") {
         throw new Error(
           `not_supported: ES256K-R not supported when signer doesn't provide a recovery param`
         );
@@ -84,8 +84,8 @@ export function bytesToBase64url(b: Uint8Array): string {
   return u8a.toString(b, "base64url");
 }
 
-export const fromJose = (signature: string): { r: string; s: string; recoveryParam?: number } =>{
-  const signatureBytes: Uint8Array = base64ToBytes(signature);
+export const fromJose = (signatureBytes: Uint8Array): { r: string; s: string; recoveryParam?: number } => {
+  //const signatureBytes: Uint8Array = base64ToBytes(signature);
   if (signatureBytes.length < 64 || signatureBytes.length > 65) {
     throw new TypeError(
       `Wrong size for signature. Expected 64 or 65 bytes, but got ${signatureBytes.length}`
@@ -95,7 +95,7 @@ export const fromJose = (signature: string): { r: string; s: string; recoveryPar
   const s = bytesToHex(signatureBytes.slice(32, 64));
   const recoveryParam = signatureBytes.length === 65 ? signatureBytes[64] : undefined;
   return { r, s, recoveryParam };
-}
+};
 
 export const bytesToHex= (b: Uint8Array): string => {
   return u8a.toString(b, "base16");
@@ -110,17 +110,20 @@ export const encodeBase64url=(s: string): string => {
 
 export const serializeTx = async (transaction: any): Promise<string> => {
   return resolveProperties(transaction).then((tx) => {
-    return keccak256(serialize(<UnsignedTransaction>tx));
+    return serialize(<UnsignedTransaction>tx);
   });
 };
 
-export const signedTransactionSignature = async (transaction: any, signature: any): Promise<string> => {
-  let sign = fromJose(signature);
-  sign.r = '0x' + sign.r;
+export const signedTransactionSignature = async (
+  transaction: any,
+  signatureBytes: Uint8Array
+): Promise<string> => {
+  let sign = fromJose(signatureBytes);
+  sign.r = "0x" + sign.r;
   sign.s = "0x" + sign.s;
   console.log(sign);
   const sig = splitSignature({
-    recoveryParam: 0,
+    v: sign.recoveryParam,
     r: sign.r,
     s: sign.s,
   });
@@ -136,3 +139,12 @@ export const  sha256 = (payload: string | Uint8Array): any=> {
   return '0x'+a.toString('hex');
 }
 
+export const decrypt = async (enc: string, privateKey): Promise<string> => {
+  const encryptedObject = EthCrypto.cipher.parse(enc);
+  return await EthCrypto.decryptWithPrivateKey(privateKey, encryptedObject);
+};
+
+export const jwtPayloadToBase64Url = async (input: string): Promise<string> => {
+  const byte = u8a.fromString(input);
+  return bytesToBase64url(byte);
+};

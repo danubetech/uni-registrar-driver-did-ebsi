@@ -10,13 +10,16 @@ import {verificationMethod} from "../utils/utils";
 import { DIDDocument } from "../utils/types";
 import { exportJWK, generateKeyPair } from "jose";
 import { base64url } from "multiformats/bases/base64";
-import {CONTEXT_W3C_DID,CONTEXT_W3C_SEC_JWS} from '../utils/constants'
+import {CONTEXT_W3C_DID,CONTEXT_W3C_SEC_JWS2020} from '../utils/constants'
+import {config} from '../config'
 
 export const legalEtityDID = async (
   token: string,
   didDocument?: DIDDocument,
   secretKey?: object
 ): Promise<DidRegistrationResponse> => {
+  const baseUrl= config.baseUrl;
+  const ebsiDidRegistryUrl=`${baseUrl}/did-registry/${config.didRegistryApiVersion}/jsonrpc`;
   const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
   let client;
   let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
@@ -38,7 +41,7 @@ export const legalEtityDID = async (
   const privateKeyJwk = await EbsiWallet.formatPrivateKey(key.getPrivate(), "jwk");
   console.log("publicKeyJwk....." + JSON.stringify(publicKeyJwk));
   const idToken = (
-    await userOnBoardAuthReq(token, did, publicKeyJwk, privateKey)
+    await userOnBoardAuthReq(token, did, publicKeyJwk, privateKey,baseUrl)
   ).id_token;
   console.log(idToken);
 
@@ -52,7 +55,7 @@ export const legalEtityDID = async (
     ...buildParam.param,
   };
 
-  await sendApiTransaction("insertDidDocument", idToken, param, client, () => {
+  await sendApiTransaction("insertDidDocument", idToken, param, client,ebsiDidRegistryUrl, () => {
     console.log(buildParam.info.title);
     console.log(buildParam.info.data);
   });
@@ -70,7 +73,7 @@ export const legalEtityDID = async (
   return {
     didState: {
       state: "finished",
-      identifier: did,
+      did: did,
       secret: keyObj,
       didDocument: buildParam.info.data,
     },
@@ -91,7 +94,7 @@ export const naturalPersonDID = async (
   const did = EbsiWallet.createDid("NATURAL_PERSON", subjectIdentifier);
   console.log("DID :"+ did)
   const didDoc = {
-    "@context": [CONTEXT_W3C_DID,CONTEXT_W3C_SEC_JWS],
+    "@context": [CONTEXT_W3C_DID,CONTEXT_W3C_SEC_JWS2020],
     id: did,
     verificationMethod: verificationMethod(did, [publicKeyJwk]),
     authentication: [`${did}#keys-1`],
@@ -112,7 +115,7 @@ export const naturalPersonDID = async (
   return {
     didState: {
       state: "finished",
-      identifier: did,
+      did: did,
       secret: keyObj,
       didDocument: didDoc,
     },
