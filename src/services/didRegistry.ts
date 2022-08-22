@@ -73,7 +73,7 @@ export const legalEtityDID = async (
   return {
     didState: {
       state: "finished",
-      identifier: did,
+      did: did,
       secret: keyObj,
       didDocument: buildParam.info.data,
     },
@@ -115,7 +115,7 @@ export const naturalPersonDID = async (
   return {
     didState: {
       state: "finished",
-      identifier: did,
+      did: did,
       secret: keyObj,
       didDocument: didDoc,
     },

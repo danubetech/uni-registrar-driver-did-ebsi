@@ -60,7 +60,7 @@ export const didUpdate = async (
   console.log("here....");
   const didState = {
     state: "finished",
-    identifier: did,
+    did: did,
     didDocument: buildParam.info.data,
   }
   return { didState: {didState:didState}}

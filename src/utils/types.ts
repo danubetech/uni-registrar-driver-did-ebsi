@@ -37,7 +37,7 @@ export type DidRegistrationResponse = {
       request2?: SigningPayload;
       request3?: SigningPayload;
     };
-    identifier?: string;
+    did?: string;
     secret?: object;
     didDocument?: object;
   };
