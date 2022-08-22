@@ -1,5 +1,5 @@
 import { JwkKeyFormat } from "../types";
-import { ES256K, OIDC_ISSUE, CONTEXT_W3C_VC, VERIFIABLE_PRESENTATION,ECDSA_SECP_256_K1_SIGNATURE_2019,ASSERTION_METHOD } from "../constants";
+import { ES256K, OIDC_ISSUE} from "../constants";
 import { prepareJWSPayload, signJWS,decrypt } from "../signingUtils";
 import { ES256KSigner } from "@cef-ebsi/did-jwt";
 import {

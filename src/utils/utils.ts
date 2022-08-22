@@ -10,9 +10,7 @@ import {
   KEY_1,
 } from "./constants";
 import { ethers } from "ethers";
-import {} from "@cef-ebsi/verifiable-presentation";
 import crypto from "crypto";
-import {  } from "@cef-ebsi/verifiable-credential";
 import {
   UnsignedTX,
   DIDDocument,
