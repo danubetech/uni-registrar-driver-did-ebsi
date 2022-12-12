@@ -14,7 +14,7 @@ COPY ./ ./
 # Copy all other source code to work directory
 # ADD . /usr/src/app
 
-ENV uniregistrar_driver_did_ebsi_api_operations_preprod='https://api.preprod.ebsi.eu'
+ENV uniregistrar_driver_did_ebsi_api_operations_preprod='https://api-pilot.ebsi.eu'
 ENV uniregistrar_driver_did_ebsi_api_operations_mainnet=
 ENV uniregistrar_driver_did_ebsi_api_operations_test=
 ENV uniregistrar_driver_did_ebsi_port=9080
