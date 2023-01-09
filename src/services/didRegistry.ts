@@ -13,7 +13,7 @@ import { base64url } from "multiformats/bases/base64";
 import {CONTEXT_W3C_DID,CONTEXT_W3C_SEC_JWS2020} from '../utils/constants'
 import {config} from '../config'
 
-export const legalEtityDID = async (
+export const legalEntityDID = async (
   token: string,
   didDocument?: DIDDocument,
   secretKey?: object
@@ -23,7 +23,7 @@ export const legalEtityDID = async (
   const keyPairs = await EbsiWallet.generateKeyPair({ format: "hex" });
   let client;
   let buffer = secretKey != null ? Buffer.from(secretKey["d"], "base64") : null;
-
+  
   if (secretKey != null && buffer == null)
     throw new Error("Unsupported key format");
   const privateKey =

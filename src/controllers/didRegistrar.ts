@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 
-import { legalEtityDID, naturalPersonDID } from "../services/didRegistry";
+import { legalEntityDID, naturalPersonDID } from "../services/didRegistry";
 import { didUpdate } from "../services/didUpdate";
 
 export const create = async (req: Request, res: Response): Promise<void> => {
@@ -15,7 +15,7 @@ export const create = async (req: Request, res: Response): Promise<void> => {
       );
     else{
       if (req.body.secret == null) throw Error("Invalid params");
-      response = await legalEtityDID(
+      response = await legalEntityDID(
         req.body.secret.token,
         req.body.didDocument,
         req.body.secret.privateKey
