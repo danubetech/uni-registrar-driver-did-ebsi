@@ -29,11 +29,11 @@ export const didUpdate = async (
   client.did = did;
   const wallet = new EbsiWallet("0x" + privateKey);
   const publicKeyJwk = <JwkKeyFormat> wallet.getPublicKey({ format: "jwk" });
-
+  publicKeyJwk.kid = did + "#keys-1";
   const idToken = (await userOnBoardAuthReq(token, did, publicKeyJwk, privateKey,baseUrl)).id_token;
 
   // Creates a URI using the wallet backend that manages entity DID keys
-  let method = options.method ? options.method : "updateDidDocument";
+  let method = options.method !== undefined ? options.method : "updateDidDocument";
   let buildParam;
   if (method == "insertDidController") {
     console.log("Insert DID Controller");
