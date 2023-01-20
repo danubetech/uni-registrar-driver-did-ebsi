@@ -1,4 +1,4 @@
-# Dockerfile for universalissuer/revocation-service-driver-revocationregistry2019
+# Dockerfile for universalregistrar/driver-did-ebsi
 
 FROM node:14.7.0-alpine
 # Env
