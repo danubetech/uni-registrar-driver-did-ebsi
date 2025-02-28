@@ -44,3 +44,6 @@ typings/
 lib/*.js
 test/*.js
 *.map
+
+# OS related files
+.DS_Store
